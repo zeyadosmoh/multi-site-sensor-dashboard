@@ -62,3 +62,10 @@ def localized(obj: dict, field: str, lang: str):
     if lang == "ar" and obj.get(f"{field}_ar"):
         return obj[f"{field}_ar"]
     return obj.get(field)
+
+
+def keepwords(text) -> Markup:
+    """Table headers: wrap only at spaces. Each hyphenated word ("Out-of-range") goes in a no-wrap span so the
+    browser cannot break it after a hyphen; the CSS keeps other words whole (no overflow-wrap: anywhere)."""
+    words = (escape(text) if not isinstance(text, Markup) else text).split(" ")
+    return Markup(" ").join(Markup('<span class="nw">') + w + Markup("</span>") if "-" in w else w for w in words)

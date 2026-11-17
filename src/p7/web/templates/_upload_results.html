@@ -2,8 +2,8 @@
 {% if results %}
 <h3>{{ t.plural("upload_results", results | length, n=ni(results | length)) }}</h3>
 <table class="responsive results">
-  <thead><tr><th>{{ t("file") }}</th><th>{{ t("result") }}</th><th>{{ t("site") }}</th><th>{{ t("month") }}</th>
-    <th class="r">{{ t("inserted") }}</th><th class="r">{{ t("updated") }}</th><th class="r">{{ t("unchanged") }}</th><th class="r">{{ t("rows_rejected") }}</th></tr></thead>
+  <thead><tr><th>{{ t("file") | keepwords }}</th><th>{{ t("result") | keepwords }}</th><th>{{ t("site") | keepwords }}</th><th>{{ t("month") | keepwords }}</th>
+    <th class="r">{{ t("inserted") | keepwords }}</th><th class="r">{{ t("updated") | keepwords }}</th><th class="r">{{ t("unchanged") | keepwords }}</th><th class="r">{{ t("rows_rejected") | keepwords }}</th></tr></thead>
   <tbody>
   {% for r in results %}
   <tr class="res-{{ r.status }}">

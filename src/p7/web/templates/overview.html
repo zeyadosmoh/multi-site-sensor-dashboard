@@ -72,10 +72,10 @@
   </div>
   <table class="sites responsive">
     <thead><tr>
-      <th>{{ t("status") }}</th><th>{{ t("site") }}</th>
-      <th class="r">{{ t("completeness") }}</th><th class="r">{{ t("unreliable_short") }}</th>
-      <th class="r">{{ t("avg_temp") }}</th><th class="r">{{ t("min_max_temp") }}</th><th class="r">{{ t("avg_hum") }}</th>
-      <th class="r">{{ t("time_out_of_range") }}</th><th class="r">{{ t("oor_events") }}</th>
+      <th>{{ t("status") | keepwords }}</th><th>{{ t("site") | keepwords }}</th>
+      <th class="r">{{ t("completeness") | keepwords }}</th><th class="r">{{ t("unreliable_short") | keepwords }}</th>
+      <th class="r">{{ t("avg_temp") | keepwords }}</th><th class="r">{{ t("min_max_temp") | keepwords }}</th><th class="r">{{ t("avg_hum") | keepwords }}</th>
+      <th class="r">{{ t("time_out_of_range") | keepwords }}</th><th class="r">{{ t("oor_events") | keepwords }}</th>
     </tr></thead>
     <tbody>
     {% for r in table %}

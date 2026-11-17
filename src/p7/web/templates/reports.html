@@ -22,7 +22,7 @@
 {% endif %}
 <section class="card">
   <table class="responsive">
-    <thead><tr><th>{{ t("report") }}</th>{% for l, _ in reports[0].langs.items() %}<th>{{ t("lang_name_" ~ l) }}</th>{% endfor %}</tr></thead>
+    <thead><tr><th>{{ t("report") | keepwords }}</th>{% for l, _ in reports[0].langs.items() %}<th>{{ t("lang_name_" ~ l) }}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for r in reports %}
     <tr>

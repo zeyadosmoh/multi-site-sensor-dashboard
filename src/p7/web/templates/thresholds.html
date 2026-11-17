@@ -5,8 +5,8 @@
 <p class="muted">{{ t("thresholds_intro") }}</p>
 <section class="card">
   <table class="responsive thresholds">
-    <thead><tr><th>{{ t("site") }}</th><th>{{ t("temp_min_c") }}</th><th>{{ t("temp_max_c") }}</th><th>{{ t("hum_min_pct") }}</th>
-      <th>{{ t("hum_max_pct") }}</th><th>{{ t("stuck_after_h") }}</th><th></th></tr></thead>
+    <thead><tr><th>{{ t("site") | keepwords }}</th><th>{{ t("temp_min_c") | keepwords }}</th><th>{{ t("temp_max_c") | keepwords }}</th><th>{{ t("hum_min_pct") | keepwords }}</th>
+      <th>{{ t("hum_max_pct") | keepwords }}</th><th>{{ t("stuck_after_h") | keepwords }}</th><th></th></tr></thead>
     <tbody>
     {% for s in sites %}{% set msg = none %}{% set ok = true %}{% include "_threshold_row.html" %}{% endfor %}
     </tbody>
@@ -16,7 +16,7 @@
   <h2>{{ t("threshold_history") }}</h2>
   {% if audit %}
   <table class="responsive">
-    <thead><tr><th>{{ t("when") }}</th><th>{{ t("site") }}</th><th>{{ t("by") }}</th><th>{{ t("before") }}</th><th>{{ t("after") }}</th></tr></thead>
+    <thead><tr><th>{{ t("when") | keepwords }}</th><th>{{ t("site") | keepwords }}</th><th>{{ t("by") | keepwords }}</th><th>{{ t("before") | keepwords }}</th><th>{{ t("after") | keepwords }}</th></tr></thead>
     <tbody>
     {% for a in audit %}
     <tr><td data-label="{{ t('when') }}">{{ nts(a.changed_at.replace(tzinfo=None, microsecond=0)) }}</td><td data-label="{{ t('site') }}" dir="ltr">{{ a.code }}</td>

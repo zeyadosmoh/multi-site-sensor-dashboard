@@ -27,9 +27,9 @@
 
 <h2>{{ t("pdf_sites_table") }}</h2>
 <table>
-  <tr><th>{{ t("site") }}</th><th class="r">{{ t("completeness") }}</th><th class="r">{{ t("unreliable_short") }}</th>
-      <th class="r">{{ t("avg_temp") }}</th><th class="r">{{ t("min_max_temp") }}</th><th class="r">{{ t("avg_hum") }}</th>
-      <th class="r">{{ t("time_out_of_range") }}</th><th class="r">{{ t("oor_events") }}</th></tr>
+  <tr><th>{{ t("site") | keepwords }}</th><th class="r">{{ t("completeness") | keepwords }}</th><th class="r">{{ t("unreliable_short") | keepwords }}</th>
+      <th class="r">{{ t("avg_temp") | keepwords }}</th><th class="r">{{ t("min_max_temp") | keepwords }}</th><th class="r">{{ t("avg_hum") | keepwords }}</th>
+      <th class="r">{{ t("time_out_of_range") | keepwords }}</th><th class="r">{{ t("oor_events") | keepwords }}</th></tr>
   {% for s in f.sites %}
   <tr><td><span class="dot {{ s.status }}"></span><span class="num" dir="ltr">{{ s.code }}</span> {{ loc(s, "city") }}</td>
       <td class="r">{{ n(s.completeness_pct ~ "%") }}</td><td class="r">{{ n(s.unreliable_readings) }}</td>
@@ -48,8 +48,8 @@
 <h2>{{ t("pdf_longest_events") }}</h2>
 {% if f.events %}
 <table>
-  <tr><th>{{ t("site") }}</th><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("duration_h") }}</th><th>{{ t("what") }}</th>
-      <th class="r">{{ t("max_temp") }}</th><th class="r">{{ t("max_hum") }}</th></tr>
+  <tr><th>{{ t("site") | keepwords }}</th><th>{{ t("start") | keepwords }}</th><th>{{ t("end") | keepwords }}</th><th class="r">{{ t("duration_h") | keepwords }}</th><th>{{ t("what") | keepwords }}</th>
+      <th class="r">{{ t("max_temp") | keepwords }}</th><th class="r">{{ t("max_hum") | keepwords }}</th></tr>
   {% for e in f.events %}
   <tr><td><span class="num" dir="ltr">{{ e.site }}</span></td><td>{{ n(e.start) }}</td><td>{{ n(e.end) }}</td><td class="r">{{ n(e.hours) }}</td>
       <td>{{ t("event_" ~ e.kind) }}</td><td class="r">{{ n(e.max_temperature) }}</td><td class="r">{{ n(e.max_humidity) }}</td></tr>
@@ -60,7 +60,7 @@
 <h2>{{ t("stuck_sensor_periods") }}</h2>
 {% if f.stuck_runs %}
 <table>
-  <tr><th>{{ t("site") }}</th><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("readings") }}</th><th class="r">{{ t("repeated_value") }}</th></tr>
+  <tr><th>{{ t("site") | keepwords }}</th><th>{{ t("start") | keepwords }}</th><th>{{ t("end") | keepwords }}</th><th class="r">{{ t("readings") | keepwords }}</th><th class="r">{{ t("repeated_value") | keepwords }}</th></tr>
   {% for s in f.stuck_runs %}
   <tr><td><span class="num" dir="ltr">{{ s.site }}</span></td><td>{{ n(s.start) }}</td><td>{{ n(s.end) }}</td><td class="r">{{ n(s.readings) }}</td>
       <td class="r">{{ n(s.temperature ~ " °C / " ~ s.humidity ~ " %") }}</td></tr>
@@ -73,7 +73,7 @@
 <p>{{ t("pdf_files_loaded", n=n(f.uploads | length | string)) }}</p>
 {% if rej %}
 <table>
-  <tr><th>{{ t("file") }}</th><th class="r">{{ t("rows_rejected") }}</th><th>{{ t("reasons") }}</th></tr>
+  <tr><th>{{ t("file") | keepwords }}</th><th class="r">{{ t("rows_rejected") | keepwords }}</th><th>{{ t("reasons") | keepwords }}</th></tr>
   {% for u in rej %}
   <tr><td><span class="num" dir="ltr">{{ u.filename }}</span></td><td class="r">{{ n(u.rejected) }}</td>
       <td>{% for r, c in u.reasons.items() %}{{ t("reject_" ~ r) }} {{ n(c | string) }}{% if not loop.last %}{{ t("list_sep") }}{% endif %}{% endfor %}</td></tr>

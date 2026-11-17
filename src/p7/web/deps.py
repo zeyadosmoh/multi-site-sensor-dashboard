@@ -17,8 +17,8 @@ from p7.i18n import LANGS, Translator, direction, normalise
 
 templates = Jinja2Templates(directory=str(files("p7.web").joinpath("templates")))
 templates.env.globals.update(n=fmt.n, nr=fmt.nr, nh=fmt.nh, nts=fmt.nts, ni=fmt.ni, number=fmt.number, ts=fmt.ts,
-                             hours=fmt.hours,
-                             LANGS=LANGS)
+                             hours=fmt.hours, LANGS=LANGS)
+templates.env.filters["keepwords"] = fmt.keepwords
 templates.env.policies["json.dumps_kwargs"] = {"sort_keys": True, "default": str}
 
 

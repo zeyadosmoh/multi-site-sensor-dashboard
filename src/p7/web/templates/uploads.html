@@ -18,9 +18,9 @@
 <section class="card">
   <h2>{{ t("upload_log") }}</h2>
   <table class="responsive log">
-    <thead><tr><th>#</th><th>{{ t("when") }}</th><th>{{ t("file") }}</th><th>{{ t("site") }}</th><th>{{ t("month") }}</th>
-      <th>{{ t("result") }}</th><th class="r">{{ t("inserted") }}</th><th class="r">{{ t("updated") }}</th><th class="r">{{ t("unchanged") }}</th>
-      <th class="r">{{ t("rows_rejected") }}</th><th>{{ t("by") }}</th></tr></thead>
+    <thead><tr><th>#</th><th>{{ t("when") | keepwords }}</th><th>{{ t("file") | keepwords }}</th><th>{{ t("site") | keepwords }}</th><th>{{ t("month") | keepwords }}</th>
+      <th>{{ t("result") | keepwords }}</th><th class="r">{{ t("inserted") | keepwords }}</th><th class="r">{{ t("updated") | keepwords }}</th><th class="r">{{ t("unchanged") | keepwords }}</th>
+      <th class="r">{{ t("rows_rejected") | keepwords }}</th><th>{{ t("by") | keepwords }}</th></tr></thead>
     <tbody>
     {% for u in log %}
     <tr>

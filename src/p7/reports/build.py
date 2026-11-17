@@ -34,6 +34,7 @@ def _env() -> Environment:
     env = Environment(loader=FileSystemLoader(str(PKG.joinpath("templates"))),
                       autoescape=select_autoescape(["html", "j2"]), undefined=StrictUndefined)
     env.globals.update(n=fmt.n, nr=fmt.nr)
+    env.filters["keepwords"] = fmt.keepwords
     return env
 
 

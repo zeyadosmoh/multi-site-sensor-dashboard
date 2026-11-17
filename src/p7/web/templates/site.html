@@ -53,12 +53,12 @@
   <div class="card"><div class="chart" data-chart="profile"></div></div>
 </section>
 
-<section class="grid2">
+<section class="grid2 tables">
   <div class="card">
     <h2>{{ t("oor_events") }} <span class="muted">({{ ni(events | length) }})</span></h2>
     {% if events %}
     <table class="responsive">
-      <thead><tr><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("duration_h") }}</th><th>{{ t("what") }}</th><th class="r">{{ t("max_temp") }}</th><th class="r">{{ t("max_hum") }}</th></tr></thead>
+      <thead><tr><th>{{ t("start") | keepwords }}</th><th>{{ t("end") | keepwords }}</th><th class="r">{{ t("duration_h") | keepwords }}</th><th>{{ t("what") | keepwords }}</th><th class="r">{{ t("max_temp") | keepwords }}</th><th class="r">{{ t("max_hum") | keepwords }}</th></tr></thead>
       <tbody>
       {% for e in events %}
       <tr><td data-label="{{ t('start') }}">{{ nts(e.start_ts) }}</td><td data-label="{{ t('end') }}">{{ nts(e.end_ts) }}</td>
@@ -74,7 +74,7 @@
     <h2>{{ t("stuck_sensor_periods") }}</h2>
     {% if stuck %}
     <table class="responsive">
-      <thead><tr><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("readings") }}</th><th class="r">{{ t("repeated_value") }}</th></tr></thead>
+      <thead><tr><th>{{ t("start") | keepwords }}</th><th>{{ t("end") | keepwords }}</th><th class="r">{{ t("readings") | keepwords }}</th><th class="r">{{ t("repeated_value") | keepwords }}</th></tr></thead>
       <tbody>
       {% for r in stuck %}
       <tr><td data-label="{{ t('start') }}">{{ nts(r.start_ts) }}</td><td data-label="{{ t('end') }}">{{ nts(r.end_ts) }}</td>

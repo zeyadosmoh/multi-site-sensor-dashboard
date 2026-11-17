@@ -6,7 +6,7 @@
 {% if err %}<p class="alert error" role="alert">{{ err }}</p>{% endif %}
 <section class="card">
   <table class="responsive">
-    <thead><tr><th>{{ t("username") }}</th><th>{{ t("role") }}</th><th>{{ t("active") }}</th><th>{{ t("last_login") }}</th><th>{{ t("actions") }}</th></tr></thead>
+    <thead><tr><th>{{ t("username") | keepwords }}</th><th>{{ t("role") | keepwords }}</th><th>{{ t("active") | keepwords }}</th><th>{{ t("last_login") | keepwords }}</th><th>{{ t("actions") | keepwords }}</th></tr></thead>
     <tbody>
     {% for u in users %}
     <tr>

@@ -54,6 +54,8 @@ main { max-width: 1320px; margin: 0 auto; padding: 18px 20px 30px; display: flex
 .cardhead h2 { margin: 0; }
 .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
 .crumbs { font-size: .9rem; color: var(--muted); }
+/* two tables side by side need room: their headers keep whole words and their timestamps don't wrap */
+@media (max-width: 1100px) { .grid2.tables { grid-template-columns: minmax(0, 1fr); } }
 
 /* filters */
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -94,6 +96,9 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: start; vertical-align: top; overflow-wrap: anywhere; }
 th { color: var(--muted); font-weight: 600; font-size: .82rem; }
+/* headers wrap only at spaces: never inside a word ("Completenes / s"), never after a hyphen (.nw) */
+th { overflow-wrap: normal; word-break: normal; hyphens: manual; }
+.nw { white-space: nowrap; }
 td.r, th.r { text-align: end; }
 table.sites tbody tr:hover { background: #f8fafc; }
 table.sites tr.row-red td:first-child { box-shadow: inset 4px 0 0 var(--red); }
@@ -148,11 +153,16 @@ form.inline { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wr
   .chart.tall { height: 300px; }
   .map { height: 280px; }
   .sitelist { grid-template-columns: repeat(2, auto); inset-inline-end: auto; inset-inline-start: 0; }
+  .thresholds input { width: 6em; }
+}
+/* tables become cards with labels up to tablet width: with whole-word headers they need ~900 px as tables */
+@media (max-width: 900px) {
   table.responsive thead { display: none; }
   table.responsive, table.responsive tbody, table.responsive tr, table.responsive td { display: block; width: 100%; }
   table.responsive tr { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; padding: 6px 10px; background: #fff; }
   table.responsive td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 12px; text-align: end; }
-  table.responsive td::before { content: attr(data-label); color: var(--muted); font-size: .82rem; text-align: start; flex: 0 1 auto; min-width: 0; }
+  table.responsive td::before { content: attr(data-label); color: var(--muted); font-size: .82rem; text-align: start; flex: 0 1 auto;
+    min-width: 0; overflow-wrap: normal; word-break: normal; }
   table.responsive td { min-width: 0; }
   table.responsive td > * { min-width: 0; }
   table.responsive td { overflow-wrap: anywhere; }
@@ -161,10 +171,11 @@ form.inline { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wr
   table.sites.responsive tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
   table.sites.responsive td:first-child, table.sites.responsive td.sitecell { grid-column: 1 / -1; }
   table.responsive td.sitecell::before { display: none; }
+  /* metric cells in a site card: the label on its own line above the value, so neither has to squeeze */
+  table.sites.responsive td:not(:first-child):not(.sitecell) { flex-direction: column; align-items: flex-start; gap: 0; text-align: start; }
   table.sites tr.row-red { border-inline-start: 4px solid var(--red); }
   table.sites tr.row-amber { border-inline-start: 4px solid #d4a017; }
   table.sites tr.row-green { border-inline-start: 4px solid var(--green); }
   table.sites tr td:first-child { box-shadow: none !important; }
-  .thresholds input { width: 6em; }
 }
 @media print { .topbar, .filters, .foot { display: none; } }
