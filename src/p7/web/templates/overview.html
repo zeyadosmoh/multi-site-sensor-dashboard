@@ -20,7 +20,7 @@
   <div class="kpi">
     <div class="label">{{ t("completeness") }}</div>
     <div class="value">{{ n(k.completeness_pct, 1, "%") }}</div>
-    <div class="sub {% if k.unreliable_readings %}bad{% endif %}">{{ t("n_unreliable", n=ni(k.unreliable_readings)) }}</div>
+    <div class="sub {% if k.unreliable_readings %}bad{% endif %}">{{ t.plural("n_unreliable", k.unreliable_readings, n=ni(k.unreliable_readings)) }}</div>
   </div>
   <div class="kpi">
     <div class="label">{{ t("avg_temp") }}</div>
@@ -34,13 +34,13 @@
   </div>
   <div class="kpi">
     <div class="label">{{ t("time_out_of_range") }}</div>
-    <div class="value">{{ nh(k.oor_minutes) }} <small>{{ t("unit_h") }}</small></div>
-    <div class="sub">{{ ni(k.oor_events) }} {{ t("events_lower") }}</div>
+    <div class="value">{{ nh(k.oor_minutes) }} <small>{{ t.plural("unit_h", hours(k.oor_minutes)) }}</small></div>
+    <div class="sub">{{ ni(k.oor_events) }} {{ t.plural("events_lower", k.oor_events) }}</div>
   </div>
   <div class="kpi">
     <div class="label">{{ t("stuck_sensors") }}</div>
     <div class="value {% if k.stuck_runs %}bad{% endif %}">{{ ni(k.stuck_runs) }}</div>
-    <div class="sub">{{ t("stuck_runs_lower") }}</div>
+    <div class="sub">{{ t.plural("stuck_runs_lower", k.stuck_runs) }}</div>
   </div>
 </section>
 
@@ -57,7 +57,7 @@
     <ul class="events">
       {% for e in events %}
       <li><a href="/sites/{{ e.code }}?month={{ month_param }}" dir="ltr" class="code">{{ e.code }}</a>
-          {{ nr(ts(e.start_ts), ts(e.end_ts)) }} · <strong>{{ nh(e.minutes) }} {{ t("unit_h") }}</strong>
+          {{ nr(ts(e.start_ts), ts(e.end_ts)) }} · <strong>{{ nh(e.minutes) }} {{ t.plural("unit_h", hours(e.minutes)) }}</strong>
           · {{ t("event_" ~ ("both" if e.temp_out_readings and e.hum_out_readings else ("temperature" if e.temp_out_readings else "humidity"))) }}</li>
       {% endfor %}
     </ul>

@@ -16,9 +16,9 @@
   <tr><td>{{ t("readings_received") }}</td><td>{{ nr(k.readings, k.expected_readings, 0, "/") }}</td></tr>
   <tr><td>{{ t("unreliable_readings") }}</td><td>{{ n(k.unreliable_readings) }}</td></tr>
   <tr><td>{{ t("valid_readings") }}</td><td>{{ n(k.valid_readings) }}</td></tr>
-  <tr><td>{{ t("time_out_of_range") }}</td><td>{{ n(k.oor_hours) }} {{ t("unit_h") }}</td></tr>
+  <tr><td>{{ t("time_out_of_range") }}</td><td>{{ n(k.oor_hours) }} {{ t.plural("unit_h", k.oor_hours) }}</td></tr>
   <tr><td>{{ t("oor_events") }}</td><td>{{ n(k.oor_events) }}</td></tr>
-  <tr><td>{{ t("longest_event") }}</td><td>{{ n(k.longest_event_hours) }} {{ t("unit_h") }}</td></tr>
+  <tr><td>{{ t("longest_event") }}</td><td>{{ n(k.longest_event_hours) }} {{ t.plural("unit_h", k.longest_event_hours) }}</td></tr>
 </table>
 <table>
   <tr><td>{{ t("avg_temp") }}</td><td>{{ n(k.temp_avg ~ " °C") }}</td></tr>
@@ -35,7 +35,7 @@
 <h2>{{ t("thresholds") }}</h2>
 <p>{{ t("temperature") }} {{ n(f.thresholds.temp_min ~ " – " ~ f.thresholds.temp_max ~ " °C") }} ·
    {{ t("humidity") }} {{ n(f.thresholds.hum_min ~ " – " ~ f.thresholds.hum_max ~ " %") }} ·
-   {{ t("stuck_after") }} {{ n(f.thresholds.stuck_min_hours) }} {{ t("unit_h") }}</p>
+   {{ t("stuck_after") }} {{ n(f.thresholds.stuck_min_hours) }} {{ t.plural("unit_h", f.thresholds.stuck_min_hours) }}</p>
 
 <section class="fig">
 <h2>{{ t("chart_daily_range") }}</h2>

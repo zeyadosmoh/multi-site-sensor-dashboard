@@ -225,7 +225,10 @@ def test_language_switch_and_rtl(app):
     assert r.status_code == 303 and r.headers["location"] == "/sites/KHB-01?month=2026-08"
     html = boss.get("/sites/KHB-01?month=2026-08").text
     assert '<html lang="ar" dir="rtl">' in html
-    assert "فرع كورنيش الخبر" in html and "قراءة غير موثوقة" in html
+    assert "فرع كورنيش الخبر" in html
+    # Arabic plural forms: 8 readings and a 6-hour stuck limit take the 3-10 form
+    assert '<span class="num" dir="ltr">8</span> قراءات غير موثوقة' in html
+    assert '<span class="num" dir="ltr">6</span> ساعات' in html and "6</span> ساعة" not in html
     # ranges and ratios are one LTR span (RTL can't swap their ends)
     assert '<span class="num" dir="ltr">18.0 – 27.0 °C</span>' in html
     # every page renders in Arabic for both roles

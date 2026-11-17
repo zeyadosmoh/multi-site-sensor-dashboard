@@ -28,7 +28,7 @@ def overview(conn: psycopg.Connection, t: Translator, month: date | None, sites:
             "categories": [r["code"] for r in ordered],
             "series": [
                 {"name": t.plain("avg_temp") + " (°C)", "data": [_f(r["temp_avg"]) for r in ordered]},
-                {"name": t.plain("time_out_of_range") + " (" + t.plain("unit_h") + ")",
+                {"name": t.plain("time_out_of_range") + " (" + t.plain("unit_h_axis") + ")",
                  "data": [_f(int(r["oor_minutes"] or 0) / 60) for r in ordered], "axis": 1},
             ],
         },
@@ -119,7 +119,7 @@ def compare(conn: psycopg.Connection, t: Translator, month: date | None, sites: 
         "quality": {"type": "bars", "title": t.plain("chart_quality_by_site"), "categories": cats,
                     "series": [{"name": t.plain("completeness") + " (%)",
                                 "data": [_f(r["completeness_pct"]) for r in ordered]},
-                               {"name": t.plain("time_out_of_range") + " (" + t.plain("unit_h") + ")", "axis": 1,
+                               {"name": t.plain("time_out_of_range") + " (" + t.plain("unit_h_axis") + ")", "axis": 1,
                                 "data": [_f(int(r["oor_minutes"] or 0) / 60) for r in ordered]}]},
         "profile": _profile(t, metrics.hour_profile(conn, month, sites), by_site=True),
         "trend": {"type": "lines_cat", "title": t.plain("chart_monthly_trend"), "unit": "°C",

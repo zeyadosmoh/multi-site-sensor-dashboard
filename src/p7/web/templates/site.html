@@ -11,14 +11,14 @@
   {% for x in row.status_reasons %}<span class="reason">{{ t("reason_" ~ x) }}</span>{% endfor %}
   <span class="muted">{{ loc(s, "city") }} · {{ t("kind_" ~ s.kind) }} · {{ t("thresholds") }}:
     {{ nr(row.th_temp_min, row.th_temp_max, 1, " °C") }}{{ t("list_sep") }}{{ nr(row.th_hum_min, row.th_hum_max, 1, " %") }}{{ t("list_sep") }}
-    {{ t("stuck_after") }} {{ ni(row.stuck_min_hours) }} {{ t("unit_h") }}</span>
+    {{ t("stuck_after") }} {{ ni(row.stuck_min_hours) }} {{ t.plural("unit_h", row.stuck_min_hours) }}</span>
 </p>
 
 <section class="kpis">
   <div class="kpi">
     <div class="label">{{ t("completeness") }}</div>
     <div class="value">{{ n(row.completeness_pct, 1, "%") }}</div>
-    <div class="sub {% if row.unreliable_readings %}bad{% endif %}">{{ t("n_unreliable", n=ni(row.unreliable_readings)) }}</div>
+    <div class="sub {% if row.unreliable_readings %}bad{% endif %}">{{ t.plural("n_unreliable", row.unreliable_readings, n=ni(row.unreliable_readings)) }}</div>
   </div>
   <div class="kpi">
     <div class="label">{{ t("avg_temp") }}</div>
@@ -32,8 +32,8 @@
   </div>
   <div class="kpi">
     <div class="label">{{ t("time_out_of_range") }}</div>
-    <div class="value">{{ nh(row.oor_minutes) }} <small>{{ t("unit_h") }}</small></div>
-    <div class="sub">{{ ni(row.oor_events) }} {{ t("events_lower") }} · {{ t("longest") }} {{ nh(row.longest_event_minutes) }} {{ t("unit_h") }}</div>
+    <div class="value">{{ nh(row.oor_minutes) }} <small>{{ t.plural("unit_h", hours(row.oor_minutes)) }}</small></div>
+    <div class="sub">{{ ni(row.oor_events) }} {{ t.plural("events_lower", row.oor_events) }} · {{ t("longest") }} {{ nh(row.longest_event_minutes) }} {{ t.plural("unit_h", hours(row.longest_event_minutes)) }}</div>
   </div>
   <div class="kpi">
     <div class="label">{{ t("readings_received") }}</div>

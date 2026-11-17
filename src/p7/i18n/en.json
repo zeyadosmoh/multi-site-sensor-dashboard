@@ -35,11 +35,23 @@
   "back_to_overview": "Back to the overview",
   "month": "Month",
   "all_months": "All months",
-  "month_1": "January", "month_2": "February", "month_3": "March", "month_4": "April", "month_5": "May",
-  "month_6": "June", "month_7": "July", "month_8": "August", "month_9": "September", "month_10": "October",
-  "month_11": "November", "month_12": "December",
+  "month_1": "January",
+  "month_2": "February",
+  "month_3": "March",
+  "month_4": "April",
+  "month_5": "May",
+  "month_6": "June",
+  "month_7": "July",
+  "month_8": "August",
+  "month_9": "September",
+  "month_10": "October",
+  "month_11": "November",
+  "month_12": "December",
   "sites": "Sites",
-  "sites_lower": "sites",
+  "sites_lower": {
+    "one": "site",
+    "other": "sites"
+  },
   "all_sites": "all",
   "apply": "Apply",
   "site": "Site",
@@ -59,7 +71,10 @@
   "kpis_label": "Key figures",
   "completeness": "Completeness",
   "completeness_pct_col": "Completeness (%)",
-  "n_unreliable": "{n} unreliable readings",
+  "n_unreliable": {
+    "one": "{n} unreliable reading",
+    "other": "{n} unreliable readings"
+  },
   "unreliable_readings": "Unreliable readings",
   "unreliable_short": "Unreliable",
   "unreliable_title": "Unreliable readings excluded.",
@@ -92,17 +107,27 @@
   "oor_readings": "Out-of-range readings",
   "oor_minutes": "Minutes out of range",
   "oor_events": "Out-of-range events",
-  "events_lower": "events",
+  "events_lower": {
+    "one": "event",
+    "other": "events"
+  },
   "longest": "longest",
   "longest_event": "Longest event",
   "longest_events": "Longest out-of-range events",
   "stuck_sensors": "Stuck sensors",
   "stuck_runs": "Stuck-sensor periods",
-  "stuck_runs_lower": "stuck-sensor periods",
+  "stuck_runs_lower": {
+    "one": "stuck-sensor period",
+    "other": "stuck-sensor periods"
+  },
   "stuck_sensor_periods": "Stuck-sensor periods (unreliable)",
   "stuck_after": "stuck after",
   "repeated_value": "Repeated value",
-  "unit_h": "h",
+  "unit_h": {
+    "one": "h",
+    "other": "h"
+  },
+  "unit_h_axis": "h",
   "map_title": "Sites map",
   "open_site": "Open site page",
   "site_table_title": "Sites",
@@ -150,7 +175,10 @@
   "uploading": "Uploading and checking…",
   "upload_none": "Choose at least one file.",
   "upload_too_large": "A file is larger than {mb} MB.",
-  "upload_results": "Results for {n} file(s)",
+  "upload_results": {
+    "one": "Results for {n} file",
+    "other": "Results for {n} files"
+  },
   "upload_log": "Upload log",
   "upload_loaded": "loaded",
   "upload_duplicate_file": "already loaded",

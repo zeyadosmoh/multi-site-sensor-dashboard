@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parent.parent / "src" / "p7"
 en = json.loads((root / "i18n" / "en.json").read_text())
 used = set()
 for p in list(root.rglob("*.html")) + list(root.rglob("*.j2")) + list(root.rglob("*.py")):
-    used |= set(re.findall(r"""\bt(?:\.plain)?\(\s*["']([a-z0-9_]+)["']""", p.read_text()))
+    used |= set(re.findall(r"""\bt(?:\.plain|\.plural|\.plural_plain)?\(\s*["']([a-z0-9_]+)["']""", p.read_text()))
 dynamic = {"status_": ["green", "amber", "red"],
            "reason_": ["low_completeness", "long_out_of_range", "stuck_sensor", "incomplete", "out_of_range"],
            "kind_": ["warehouse", "branch"], "event_": ["temperature", "humidity", "both"],
@@ -27,7 +27,17 @@ missing = sorted(used - en.keys())
 unused = sorted(en.keys() - used)
 ar = json.loads((root / "i18n" / "ar.json").read_text()) if (root / "i18n" / "ar.json").exists() else {}
 ar_missing = sorted(en.keys() - ar.keys()) if ar else []
+# plural entries (JSON objects) need every CLDR form of their language, and the same kind of entry in both files
+FORMS = {"en": {"one", "other"}, "ar": {"zero", "one", "two", "few", "many", "other"}}
+bad_plurals = []
+for lang, d in (("en", en), ("ar", ar)):
+    for k, v in d.items():
+        if isinstance(v, dict) and set(v) != FORMS[lang]:
+            bad_plurals.append(f"{lang}:{k} forms {sorted(v)}")
+        if k in en and k in ar and isinstance(en[k], dict) != isinstance(ar[k], dict):
+            bad_plurals.append(f"{lang}:{k} plural in one file only")
 print("missing in en.json:", missing)
 print("unused in en.json:", unused)
 print("en keys missing in ar.json:", ar_missing)
-sys.exit(1 if missing or ar_missing else 0)
+print("incomplete plural entries:", sorted(set(bad_plurals)))
+sys.exit(1 if missing or ar_missing or bad_plurals else 0)

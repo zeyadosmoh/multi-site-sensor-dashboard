@@ -3,7 +3,7 @@
 {% block body %}
 {% set k = f.kpis %}
 <h1>{{ t("pdf_summary_title") }}</h1>
-<p class="sub">{{ month_label }} · {{ n(k.sites) }} {{ t("sites_lower") }} · {{ t("pdf_generated") }} {{ n(f.generated_at) }}</p>
+<p class="sub">{{ month_label }} · {{ n(k.sites) }} {{ t.plural("sites_lower", k.sites) }} · {{ t("pdf_generated") }} {{ n(f.generated_at) }}</p>
 <div class="banner">{{ t("synthetic_banner") }}</div>
 
 <p>{% for s in ["red", "amber", "green"] %}<span class="status {{ s }}">{{ t("status_" ~ s) }}: {{ n(f.status_counts[s] | string) }}</span> {% endfor %}</p>
@@ -20,7 +20,7 @@
   <tr><td>{{ t("avg_temp") }}</td><td>{{ n(k.temp_avg ~ " °C") }}</td></tr>
   <tr><td>{{ t("temp_range") }}</td><td>{{ n(k.temp_min ~ " – " ~ k.temp_max ~ " °C") }}</td></tr>
   <tr><td>{{ t("avg_hum") }}</td><td>{{ n(k.hum_avg ~ " %") }}</td></tr>
-  <tr><td>{{ t("time_out_of_range") }}</td><td>{{ n(k.oor_hours) }} {{ t("unit_h") }} · {{ n(k.oor_events) }} {{ t("events_lower") }}</td></tr>
+  <tr><td>{{ t("time_out_of_range") }}</td><td>{{ n(k.oor_hours) }} {{ t.plural("unit_h", k.oor_hours) }} · {{ n(k.oor_events) }} {{ t.plural("events_lower", k.oor_events) }}</td></tr>
 </table>
 </div>
 {% if k.unreliable_readings != "0" %}<p class="note warn">{{ t("unreliable_note") }}</p>{% endif %}

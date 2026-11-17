@@ -1,6 +1,6 @@
 {% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
 {% if results %}
-<h3>{{ t("upload_results", n=ni(results | length)) }}</h3>
+<h3>{{ t.plural("upload_results", results | length, n=ni(results | length)) }}</h3>
 <table class="responsive results">
   <thead><tr><th>{{ t("file") }}</th><th>{{ t("result") }}</th><th>{{ t("site") }}</th><th>{{ t("month") }}</th>
     <th class="r">{{ t("inserted") }}</th><th class="r">{{ t("updated") }}</th><th class="r">{{ t("unchanged") }}</th><th class="r">{{ t("rows_rejected") }}</th></tr></thead>
