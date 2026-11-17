@@ -82,7 +82,7 @@
   "avg_hum_pct": "متوسط الرطوبة (%)",
   "min_hum_pct": "أدنى رطوبة (%)",
   "max_hum_pct": "أعلى رطوبة (%)",
-  "min_max_temp": "أدنى – أعلى °C",
+  "min_max_temp": "الأدنى – الأعلى (°C)",
   "temp_range": "نطاق الحرارة",
   "range": "النطاق",
   "temperature": "درجة الحرارة",

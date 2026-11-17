@@ -82,7 +82,7 @@
   "avg_hum_pct": "Avg humidity (%)",
   "min_hum_pct": "Min humidity (%)",
   "max_hum_pct": "Max humidity (%)",
-  "min_max_temp": "Min – max °C",
+  "min_max_temp": "Min – max (°C)",
   "temp_range": "Temperature range",
   "range": "range",
   "temperature": "Temperature",

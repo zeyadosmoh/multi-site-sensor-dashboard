@@ -33,6 +33,7 @@ def main() -> int:
     ap.add_argument("--out", default="docs/img")
     ap.add_argument("--lang", default="en,ar")
     ap.add_argument("--full", action="store_true", help="full-page screenshots")
+    ap.add_argument("--upload", help="a file to upload for the upload-results screenshot (e.g. the sample zip)")
     a = ap.parse_args()
     s = get_settings()
     base = a.base or f"http://{s.app_host}:{s.app_port}"
@@ -64,8 +65,18 @@ def main() -> int:
                     width = page.evaluate("document.documentElement.scrollWidth")
                     if width > vp["width"] + 1:
                         problems.append(f"{name} {lang} {vp_name}: horizontal scroll ({width}px > {vp['width']}px)")
-                    page.screenshot(path=str(out / f"{name}-{lang}-{vp_name}.png"),
-                                    full_page=a.full or vp_name == "phone")
+                    page.screenshot(path=str(out / f"{name}-{lang}-{vp_name}.png"), full_page=a.full)
+                    if vp_name == "phone" and name == "overview":
+                        page.evaluate("document.querySelector('table.sites').scrollIntoView()")
+                        page.screenshot(path=str(out / f"sites-table-{lang}-phone.png"))
+                if vp_name == "desktop" and lang == "en" and a.upload:
+                    # re-upload the committed sample month: every file is reported as already loaded
+                    page.goto(base + "/uploads")
+                    page.set_input_files("input[type=file]", a.upload)
+                    page.click("form.upload button[type=submit]")
+                    page.wait_for_selector("#upload-results table", timeout=60000)
+                    page.locator("#upload-results").scroll_into_view_if_needed()
+                    page.screenshot(path=str(out / "upload-results-en-desktop.png"))
             ctx.close()
         browser.close()
     for pr in problems:

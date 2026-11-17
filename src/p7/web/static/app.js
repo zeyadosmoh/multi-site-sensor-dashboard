@@ -87,8 +87,8 @@
       o.xAxis = timeAxis();
       // keep both limit lines in view
       o.yAxis = axisY(c.unit, { position: "left",
-        min: function (v) { return Math.floor(Math.min(v.min, c.min) - 1); },
-        max: function (v) { return Math.ceil(Math.max(v.max, c.max) + 1); } });
+        min: function (v) { return Math.floor((Math.min(v.min, c.min) - 1) / 5) * 5; },
+        max: function (v) { return Math.ceil((Math.max(v.max, c.max) + 1) / 5) * 5; } });
       o.dataZoom = [{ type: "inside" }, { type: "slider", height: 18, bottom: 26 }];
       o.grid.bottom = 76;
       var band = c.stuck.map(function (r) { return [{ xAxis: r[0], name: c.stuck_name }, { xAxis: r[1] }]; });

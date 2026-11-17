@@ -152,7 +152,8 @@ form.inline { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wr
   table.responsive, table.responsive tbody, table.responsive tr, table.responsive td { display: block; width: 100%; }
   table.responsive tr { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; padding: 6px 10px; background: #fff; }
   table.responsive td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 12px; text-align: end; }
-  table.responsive td::before { content: attr(data-label); color: var(--muted); font-size: .82rem; text-align: start; flex: 0 0 auto; }
+  table.responsive td::before { content: attr(data-label); color: var(--muted); font-size: .82rem; text-align: start; flex: 0 1 auto; min-width: 0; }
+  table.responsive td { min-width: 0; }
   table.responsive td > * { min-width: 0; }
   table.responsive td { overflow-wrap: anywhere; }
   table.responsive td.sitecell { display: block; text-align: start; }
