@@ -39,7 +39,6 @@ p7 = [
     "web/templates/**/*.html",
     "web/static/**/*",
     "reports/templates/*.j2",
-    "reports/assets/fonts/*",
 ]
 
 [tool.pytest.ini_options]
