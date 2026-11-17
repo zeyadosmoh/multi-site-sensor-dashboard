@@ -94,7 +94,7 @@ def simulate_site(site: Site, rng: np.random.Generator) -> tuple[np.ndarray, np.
             # exponential drift toward outdoor (tau 3 h), then 4 h recovery back to normal
             k = np.arange(b - a)
             w = 1 - np.exp(-(k + 1) / 3)
-            temp[a:b] = temp[a:b] * (1 - w) + (t_out[a:b] - 1.5) * w
+            temp[a:b] = temp[a:b] * (1 - w) + (t_out[a:b] + 1.0) * w  # roof solar gain, no cooling
             hum[a:b] = hum[a:b] * (1 - w) + (rh_out[a:b] * 0.95) * w
             last_t, last_h = temp[b - 1], hum[b - 1]
             for j in range(4):

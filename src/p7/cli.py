@@ -129,6 +129,31 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_verify_manifest(args) -> int:
+    from p7.db import connect
+    from p7.verify import compare_with_manifest
+
+    with connect() as conn:
+        r = compare_with_manifest(conn, Path(args.manifest))
+    for f in r["files"]:
+        if not f["ok"] or f["expected_rejects"] or args.verbose:
+            mark = "OK  " if f["ok"] else "FAIL"
+            print(f"{mark} {f['filename']:32s} rejects={json.dumps(f['expected_rejects'])} {'; '.join(f['problems'])}")
+    print(f"files matching manifest: {r['files_ok']}/{r['files_total']}")
+    print(f"readings stored {r['readings_stored']:,} / expected {r['readings_expected']:,}")
+    print(f"stuck runs expected {r['stuck_expected']}\n           detected {r['stuck_detected']}")
+    for e in r["events"]:
+        print(f"event {e['site']} {e['kind']:10s} planted {e['start']}..{e['end']} -> {e['detected_events']} "
+              f"event(s), {e['detected_readings']} readings, {e['detected_first']}..{e['detected_last']}")
+    for o in r["outages"]:
+        print(f"outage {o['site']} {o['start']}..{o['end']} -> readings in window: {o['readings_in_window']}")
+    ok = (r["files_ok"] == r["files_total"] and r["readings_stored"] == r["readings_expected"]
+          and r["stuck_expected"] == r["stuck_detected"] and all(e["detected_events"] for e in r["events"])
+          and all(o["readings_in_window"] == 0 for o in r["outages"]))
+    print("MATCH" if ok else "MISMATCH")
+    return 0 if ok else 1
+
+
 def cmd_serve(args) -> int:
     import uvicorn
 
@@ -181,6 +206,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--site")
     s.add_argument("--lang", default="en", help="en, ar or en,ar")
     s.set_defaults(fn=cmd_report)
+
+    s = sub.add_parser("verify-manifest", help="compare the database with the generator's manifest.json")
+    s.add_argument("--manifest", default="data/synthetic/manifest.json")
+    s.add_argument("-v", "--verbose", action="store_true")
+    s.set_defaults(fn=cmd_verify_manifest)
 
     s = sub.add_parser("serve", help="run the web app on APP_HOST:APP_PORT (127.0.0.1:8790)")
     s.set_defaults(fn=cmd_serve)

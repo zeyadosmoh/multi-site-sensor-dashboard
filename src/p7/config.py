@@ -28,8 +28,6 @@ class Settings(BaseSettings):
 
     reports_dir: Path = Path("reports")
     max_upload_mb: int = 50
-    # Hourly readings: each reading stands for this many minutes when counting time out of range.
-    reading_interval_minutes: int = 60
     # Generate PDFs in the background after each upload (tests switch this off).
     reports_after_upload: bool = True
 
