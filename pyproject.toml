@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "p7-sensor-dashboard"
+version = "0.1.0"
+description = "Multi-site temperature/humidity monitoring: Excel ingestion, PostgreSQL metrics, web dashboard, PDF reports (synthetic data)."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.2",
+    "argon2-cffi>=23.1",
+    "psycopg[binary]>=3.2",
+    "pydantic-settings>=2.4",
+    "openpyxl>=3.1",
+    "numpy>=2.0",
+    "matplotlib>=3.10",
+    "playwright==1.65.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pypdf>=6.0", "httpx>=0.27", "ruff>=0.6"]
+
+[project.scripts]
+p7 = "p7.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+p7 = [
+    "db/sql/*.sql",
+    "i18n/*.json",
+    "web/templates/*.html",
+    "web/templates/**/*.html",
+    "web/static/**/*",
+    "reports/templates/*.j2",
+    "reports/assets/fonts/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["pdf: renders PDFs with Playwright Chromium (slower)"]
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

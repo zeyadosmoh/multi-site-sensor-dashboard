@@ -1,0 +1,49 @@
+name: p7-sensors
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: p7-sensors-pg
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: Asia/Riyadh
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5437}:5432"
+    volumes:
+      - p7_sensors_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  # Web app (FastAPI). Started with `docker compose --profile app up -d`; for local dev run it from .venv instead.
+  app:
+    profiles: ["app"]
+    build: .
+    image: p7-sensors-app:local
+    container_name: p7-sensors-app
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      APP_HOST: 0.0.0.0          # inside the container only; the host port below is 127.0.0.1
+      APP_PORT: "8790"
+      REPORTS_DIR: /app/reports
+      TZ: Asia/Riyadh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_PORT:-8790}:8790"
+    volumes:
+      - p7_sensors_reports:/app/reports
+    restart: unless-stopped
+
+volumes:
+  p7_sensors_pgdata:
+  p7_sensors_reports:

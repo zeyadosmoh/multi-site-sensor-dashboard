@@ -1,0 +1,32 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# generated synthetic data (rebuild with `python -m p7 generate`); one sample month is committed as a zip
+data/*
+!data/.gitkeep
+!data/sample/
+data/sample/*
+!data/sample/*.zip
+!data/sample/README.md
+
+# generated reports and uploads (committed samples live in docs/)
+reports/
+uploads/
+
+# editors / os
+.idea/
+.vscode/
+.DS_Store
+~$*
