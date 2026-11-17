@@ -1,0 +1,85 @@
+{% extends "_base.html.j2" %}
+{% block title %}{{ f.site.code }} {{ f.month }}{% endblock %}
+{% block body %}
+{% set k = f.kpis %}
+<h1>{{ t("pdf_site_title") }}: {{ f.site.name }} (<span class="num" dir="ltr">{{ f.site.code }}</span>)</h1>
+<p class="sub">{{ f.site.city }} · {{ t("kind_" ~ f.site.kind) }} · {{ month_label }} · {{ t("pdf_generated") }} {{ n(f.generated_at) }}</p>
+<div class="banner">{{ t("synthetic_banner") }}</div>
+
+<p>{{ t("status") }}: <span class="status {{ f.status }}">{{ t("status_" ~ f.status) }}</span>
+{% for r in f.status_reasons %} · {{ t("reason_" ~ r) }}{% endfor %}</p>
+
+<h2>{{ t("pdf_key_figures") }}</h2>
+<div class="kv">
+<table>
+  <tr><td>{{ t("completeness") }}</td><td>{{ n(k.completeness_pct ~ "%") }}</td></tr>
+  <tr><td>{{ t("readings_received") }}</td><td>{{ n(k.readings) }} / {{ n(k.expected_readings) }}</td></tr>
+  <tr><td>{{ t("unreliable_readings") }}</td><td>{{ n(k.unreliable_readings) }}</td></tr>
+  <tr><td>{{ t("valid_readings") }}</td><td>{{ n(k.valid_readings) }}</td></tr>
+  <tr><td>{{ t("time_out_of_range") }}</td><td>{{ n(k.oor_hours) }} {{ t("unit_h") }}</td></tr>
+  <tr><td>{{ t("oor_events") }}</td><td>{{ n(k.oor_events) }}</td></tr>
+  <tr><td>{{ t("longest_event") }}</td><td>{{ n(k.longest_event_hours) }} {{ t("unit_h") }}</td></tr>
+</table>
+<table>
+  <tr><td>{{ t("avg_temp") }}</td><td>{{ n(k.temp_avg ~ " °C") }}</td></tr>
+  <tr><td>{{ t("min_temp") }}</td><td>{{ n(k.temp_min ~ " °C") }}</td></tr>
+  <tr><td>{{ t("max_temp") }}</td><td>{{ n(k.temp_max ~ " °C") }}</td></tr>
+  <tr><td>{{ t("avg_hum") }}</td><td>{{ n(k.hum_avg ~ " %") }}</td></tr>
+  <tr><td>{{ t("min_hum") }}</td><td>{{ n(k.hum_min ~ " %") }}</td></tr>
+  <tr><td>{{ t("max_hum") }}</td><td>{{ n(k.hum_max ~ " %") }}</td></tr>
+  <tr><td>{{ t("stuck_runs") }}</td><td>{{ n(k.stuck_runs) }}</td></tr>
+</table>
+</div>
+<p class="note{% if k.unreliable_readings != '0' %} warn{% endif %}">{{ t("unreliable_note") }}</p>
+
+<h2>{{ t("thresholds") }}</h2>
+<p>{{ t("temperature") }} {{ n(f.thresholds.temp_min ~ " – " ~ f.thresholds.temp_max ~ " °C") }} ·
+   {{ t("humidity") }} {{ n(f.thresholds.hum_min ~ " – " ~ f.thresholds.hum_max ~ " %") }} ·
+   {{ t("stuck_after") }} {{ n(f.thresholds.stuck_min_hours) }} {{ t("unit_h") }}</p>
+
+<h2>{{ t("chart_daily_range") }}</h2>
+<div class="chart">{{ charts.temp | safe }}</div>
+<p class="legend">{{ t("pdf_legend_temp") }}</p>
+<h2>{{ t("chart_daily_humidity") }}</h2>
+<div class="chart">{{ charts.hum | safe }}</div>
+<p class="legend">{{ t("pdf_legend_hum") }}</p>
+{% if charts.profile %}
+<h2>{{ t("chart_hour_profile") }}</h2>
+<div class="chart">{{ charts.profile | safe }}</div>
+<p class="legend">{{ t("pdf_legend_profile") }}</p>
+{% endif %}
+
+<h2>{{ t("oor_events") }} ({{ n(f.events_total) }})</h2>
+{% if f.events %}
+<table>
+  <tr><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("duration_h") }}</th><th>{{ t("what") }}</th>
+      <th class="r">{{ t("max_temp") }}</th><th class="r">{{ t("max_hum") }}</th></tr>
+  {% for e in f.events %}
+  <tr><td>{{ n(e.start) }}</td><td>{{ n(e.end) }}</td><td class="r">{{ n(e.hours) }}</td><td>{{ t("event_" ~ e.kind) }}</td>
+      <td class="r">{{ n(e.max_temperature) }}</td><td class="r">{{ n(e.max_humidity) }}</td></tr>
+  {% endfor %}
+</table>
+{% if f.events_total != f.events | length | string %}<p class="muted small">{{ t("pdf_top_10") }}</p>{% endif %}
+{% else %}<p class="muted">{{ t("none") }}</p>{% endif %}
+
+<h2>{{ t("stuck_sensor_periods") }}</h2>
+{% if f.stuck_runs %}
+<table>
+  <tr><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("readings") }}</th><th class="r">{{ t("repeated_value") }}</th></tr>
+  {% for s in f.stuck_runs %}
+  <tr><td>{{ n(s.start) }}</td><td>{{ n(s.end) }}</td><td class="r">{{ n(s.readings) }}</td>
+      <td class="r">{{ n(s.temperature ~ " °C / " ~ s.humidity ~ " %") }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">{{ t("none") }}</p>{% endif %}
+
+<h2>{{ t("pdf_data_sources") }}</h2>
+<table>
+  <tr><th>{{ t("file") }}</th><th class="r">{{ t("rows_loaded") }}</th><th class="r">{{ t("rows_rejected") }}</th><th>{{ t("reasons") }}</th></tr>
+  {% for u in f.uploads %}
+  <tr><td><span class="num" dir="ltr">{{ u.filename }}</span></td><td class="r">{{ n(u.rows_loaded) }}</td><td class="r">{{ n(u.rejected) }}</td>
+      <td>{% for r, c in u.reasons.items() %}{{ t("reject_" ~ r) }} {{ n(c | string) }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+  {% endfor %}
+</table>
+<p class="muted small">{{ t("pdf_definitions") }}</p>
+{% endblock %}

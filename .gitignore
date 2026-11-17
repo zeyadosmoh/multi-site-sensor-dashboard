@@ -22,8 +22,8 @@ data/sample/*
 !data/sample/README.md
 
 # generated reports and uploads (committed samples live in docs/)
-reports/
-uploads/
+/reports/
+/uploads/
 
 # editors / os
 .idea/

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{% endblock %}</title>
+<style>
+{{ font_css | safe }}
+@page { size: A4; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #1f2933; font: 10px/1.45 "DejaVu Sans", Arial, sans-serif; }
+html[lang="ar"] body { font-family: "Noto Sans Arabic", "DejaVu Sans", Arial, sans-serif; font-size: 10.5px; }
+.num { unicode-bidi: isolate; direction: ltr; font-variant-numeric: tabular-nums; white-space: nowrap; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+h2 { font-size: 12.5px; margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 1px solid #e3e8ee; break-after: avoid; }
+.sub { color: #6b7785; margin: 0; }
+.banner { background: #fff4d6; border: 1px solid #f0d58a; color: #6b4e00; padding: 5px 8px; border-radius: 4px;
+          margin: 8px 0 10px; font-size: 9px; }
+.status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 9.5px; color: #fff; }
+.status.green { background: #2e8b57; } .status.amber { background: #b8860b; } .status.red { background: #c23b3b; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 4px; vertical-align: middle; }
+.dot.green { background: #2e8b57; } .dot.amber { background: #d4a017; } .dot.red { background: #c23b3b; }
+table { width: 100%; border-collapse: collapse; margin: 4px 0; break-inside: auto; }
+th, td { padding: 3px 5px; border-bottom: 1px solid #edf0f3; text-align: start; vertical-align: top; }
+th { color: #6b7785; font-weight: 600; font-size: 8.5px; text-transform: none; }
+td.r, th.r { text-align: end; }
+tr { break-inside: avoid; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+.kv table td:first-child { color: #4a5563; }
+.kv table td:last-child { text-align: end; font-weight: 600; }
+.note { background: #f3f5f8; border-inline-start: 3px solid #6b7785; padding: 5px 8px; margin: 6px 0; font-size: 9px; }
+.note.warn { border-color: #c23b3b; background: #fbeeee; }
+.chart svg { width: 100%; height: auto; }
+.legend { color: #6b7785; font-size: 8.5px; margin: 2px 0 0; }
+.muted { color: #6b7785; }
+.small { font-size: 8.5px; }
+.pagebreak { break-before: page; }
+</style>
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>
