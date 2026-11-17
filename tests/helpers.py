@@ -5,6 +5,8 @@ from datetime import datetime
 
 from openpyxl import Workbook
 
+from p7.db import refresh_metrics
+
 HEADER = ["Date", "Time", "Temperature", "Humidity"]
 
 
@@ -51,3 +53,4 @@ def load_readings(conn, site_code: str, readings: list[tuple], month: str = "202
         for ts, t, h in readings:
             conn.execute("INSERT INTO readings (site_id, reading_ts, temperature, humidity, upload_id) "
                          "VALUES (%s, %s, %s, %s, %s)", (site_id, ts, t, h, up))
+        refresh_metrics(conn)

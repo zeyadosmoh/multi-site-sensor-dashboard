@@ -17,6 +17,7 @@
 
 DROP VIEW IF EXISTS v_site_month, v_site_day, v_oor_events, v_stuck_runs, v_readings_flagged, v_calendar_day,
     v_reporting_months CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS mv_readings_flagged CASCADE;
 
 CREATE VIEW v_reporting_months AS
 SELECT DISTINCT month FROM uploads WHERE status = 'loaded' AND month IS NOT NULL;
@@ -27,7 +28,10 @@ FROM sites s
 CROSS JOIN v_reporting_months m
 CROSS JOIN LATERAL generate_series(m.month, (m.month + interval '1 month' - interval '1 day'), interval '1 day') d;
 
-CREATE VIEW v_readings_flagged AS
+-- Per-reading flags need window functions over every reading, so they are materialized and refreshed by
+-- p7.db.refresh_metrics() after each upload batch, threshold edit or interval change (everything else is a plain
+-- view on top and always current).
+CREATE MATERIALIZED VIEW mv_readings_flagged AS
 WITH cfg AS (
     SELECT make_interval(mins => reading_interval_minutes) AS step, reading_interval_minutes AS step_min
     FROM app_config
@@ -71,6 +75,11 @@ SELECT o.site_id, o.reading_ts, o.reading_ts::date AS day, date_trunc('month', o
        CASE WHEN o.out_of_range THEN o.oor_grp_all END AS oor_grp,
        o.same_grp, o.stuck
 FROM oor o;
+
+CREATE UNIQUE INDEX mv_readings_flagged_pk ON mv_readings_flagged (site_id, reading_ts);
+CREATE INDEX mv_readings_flagged_month ON mv_readings_flagged (month, site_id);
+
+CREATE VIEW v_readings_flagged AS SELECT * FROM mv_readings_flagged;
 
 CREATE VIEW v_oor_events AS
 SELECT site_id, oor_grp AS event_no,

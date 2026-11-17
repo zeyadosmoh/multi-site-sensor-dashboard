@@ -13,7 +13,9 @@ SQL = files("p7.db").joinpath("sql")
 def connect(settings: Settings | None = None, dbname: str | None = None, autocommit: bool = False,
             dict_rows: bool = True) -> psycopg.Connection:
     s = settings or get_settings()
-    return psycopg.connect(s.dsn(dbname), autocommit=autocommit, row_factory=dict_row if dict_rows else None)
+    # jit=off: JIT compilation costs ~1 s per query here and these queries run in milliseconds without it
+    return psycopg.connect(s.dsn(dbname), autocommit=autocommit, row_factory=dict_row if dict_rows else None,
+                           options="-c jit=off")
 
 
 def ensure_database(settings: Settings, dbname: str) -> None:
@@ -40,6 +42,12 @@ def migrate(conn: psycopg.Connection) -> list[str]:
             applied.append(f.name)
         conn.execute(SQL.joinpath("views.sql").read_text())
     return applied
+
+
+def refresh_metrics(conn: psycopg.Connection) -> None:
+    """Recompute per-reading flags (stuck, out of range, event groups). Call after readings, thresholds or the
+    reading interval change."""
+    conn.execute("REFRESH MATERIALIZED VIEW mv_readings_flagged")
 
 
 def reset(conn: psycopg.Connection) -> None:

@@ -20,6 +20,7 @@ from pathlib import Path, PurePosixPath
 
 import psycopg
 
+from p7.db import refresh_metrics
 from p7.ingest.detect import detect
 from p7.ingest.excel import FileRejected, parse_workbook
 from p7.ingest.validate import reject_text, validate_rows
@@ -237,6 +238,8 @@ def ingest_uploads(conn: psycopg.Connection, uploads: list[tuple[str, bytes]], s
                 results.append(ingest_one(conn, inc, batch_id, source, user_id, pre_rejected=reason))
             for inc in ok:
                 results.append(ingest_one(conn, inc, batch_id, source, user_id))
+        if any(r.changed for r in results):
+            refresh_metrics(conn)
     finally:
         conn.autocommit = previous
     return results

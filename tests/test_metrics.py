@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 
 from p7 import metrics
+from p7.db import refresh_metrics
 from p7.sites import update_thresholds
 from tests.helpers import load_readings
 
@@ -158,6 +159,7 @@ def test_threshold_edit_changes_metrics_immediately_and_is_audited(day):
 def test_reading_interval_setting(day):
     # with a 30-minute interval the same 14 readings are 14/48 of a day and each out-of-range reading is 30 min
     day.execute("UPDATE app_config SET reading_interval_minutes = 30")
+    refresh_metrics(day)
     r = one_day(day)
     assert r["expected_readings"] == 48 and r["completeness_pct"] == Decimal("29.17") and r["oor_minutes"] == 120
 

@@ -4,6 +4,7 @@ import json
 
 import psycopg
 
+from p7.db import refresh_metrics
 from p7.generate.sites import SITES
 
 THRESHOLD_FIELDS = ("temp_min", "temp_max", "hum_min", "hum_max", "stuck_min_hours")
@@ -67,4 +68,5 @@ def update_thresholds(conn: psycopg.Connection, site_id: int, values: dict, user
         conn.execute("INSERT INTO threshold_audit (site_id, user_id, old_values, new_values) VALUES (%s,%s,%s,%s)",
                      (site_id, user_id, json.dumps(old), json.dumps(new)))
         conn.execute("UPDATE reports SET stale = true WHERE site_id = %s OR kind = 'summary_month'", (site_id,))
+        refresh_metrics(conn)
     return True

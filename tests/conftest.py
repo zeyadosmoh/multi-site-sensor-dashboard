@@ -5,7 +5,7 @@ import os
 import pytest
 
 from p7.config import Settings
-from p7.db import connect, ensure_database, migrate, reset
+from p7.db import connect, ensure_database, migrate, refresh_metrics, reset
 from p7.sites import seed_sites
 
 TEST_DB = os.environ.get("P7_TEST_DB", "p7_test")
@@ -36,6 +36,7 @@ def conn(_db):
     with _db.transaction():
         _db.execute(f"TRUNCATE {TABLES} RESTART IDENTITY CASCADE")
         _db.execute("UPDATE app_config SET reading_interval_minutes = 60")
+        refresh_metrics(_db)
     seed_sites(_db)
     yield _db
     _db.rollback()
