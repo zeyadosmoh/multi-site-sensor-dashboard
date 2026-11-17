@@ -31,13 +31,13 @@ def _db(settings):
 @pytest.fixture
 def conn(_db):
     """Empty tables (sites re-seeded with default thresholds, ids restart at 1) for every test."""
-    _db.rollback()
-    _db.autocommit = False
+    _db.autocommit = True
     with _db.transaction():
         _db.execute(f"TRUNCATE {TABLES} RESTART IDENTITY CASCADE")
         _db.execute("UPDATE app_config SET reading_interval_minutes = 60")
         refresh_metrics(_db)
     seed_sites(_db)
     yield _db
-    _db.rollback()
-    _db.autocommit = False
+    if not _db.autocommit:
+        _db.rollback()
+        _db.autocommit = True

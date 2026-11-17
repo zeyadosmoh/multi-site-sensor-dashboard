@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+<title>{% block title %}{{ t("app_name") }}{% endblock %} · {{ t("app_name") }}</title>
+<link rel="stylesheet" href="/static/app.css">
+{% block head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRF-Token": "{{ csrf }}"}'>
+<a class="skip" href="#main">{{ t("skip_to_content") }}</a>
+<header class="topbar">
+  <a class="brand" href="/"><span class="logo" aria-hidden="true"></span>{{ t("app_name") }}</a>
+  {% if user %}
+  <nav class="nav" aria-label="{{ t('nav_label') }}">
+    <a href="/" {% if path == "/" %}aria-current="page"{% endif %}>{{ t("nav_overview") }}</a>
+    <a href="/compare" {% if path == "/compare" %}aria-current="page"{% endif %}>{{ t("nav_compare") }}</a>
+    <a href="/reports" {% if path == "/reports" %}aria-current="page"{% endif %}>{{ t("nav_reports") }}</a>
+    {% if user.role == "admin" %}
+    <a href="/uploads" {% if path == "/uploads" %}aria-current="page"{% endif %}>{{ t("nav_uploads") }}</a>
+    <a href="/thresholds" {% if path == "/thresholds" %}aria-current="page"{% endif %}>{{ t("nav_thresholds") }}</a>
+    <a href="/users" {% if path == "/users" %}aria-current="page"{% endif %}>{{ t("nav_users") }}</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+  <div class="tools">
+    {% set here = path ~ ("?" ~ query if query else "") %}
+    {% for code in LANGS %}{% if code != lang %}
+    <a class="lang" href="/lang/{{ code }}?next={{ here | urlencode }}" lang="{{ code }}" hreflang="{{ code }}">{{ t("switch_to_" ~ code) }}</a>
+    {% endif %}{% endfor %}
+    {% if user %}
+    <span class="who" title="{{ t('role_' ~ user.role) }}">{{ user.username }} · {{ t("role_" ~ user.role) }}</span>
+    <form method="post" action="/logout" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="link" type="submit">{{ t("logout") }}</button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+<div class="synthetic" role="note">{{ t("synthetic_banner") }}</div>
+<main id="main">
+{% block content %}{% endblock %}
+</main>
+<footer class="foot">{{ t("footer_synthetic") }}</footer>
+<script src="/static/vendor/htmx.min.js"></script>
+{% block scripts %}{% endblock %}
+<script src="/static/app.js"></script>
+</body>
+</html>

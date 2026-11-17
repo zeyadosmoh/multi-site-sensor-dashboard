@@ -1,0 +1,12 @@
+<tr id="th-{{ s.code }}">
+  <td data-label="{{ t('site') }}"><span dir="ltr" class="code">{{ s.code }}</span> <span class="small">{{ s.name }}</span>
+    {% if msg %}<div class="small {{ 'ok' if ok else 'bad' }}" role="status">{{ msg }}</div>{% endif %}</td>
+  {% set f = "thf-" ~ s.code %}
+  <td data-label="{{ t('temp_min_c') }}"><input form="{{ f }}" name="temp_min" value="{{ s.temp_min }}" inputmode="decimal" dir="ltr" size="5" aria-label="{{ s.code }} {{ t('temp_min_c') }}"></td>
+  <td data-label="{{ t('temp_max_c') }}"><input form="{{ f }}" name="temp_max" value="{{ s.temp_max }}" inputmode="decimal" dir="ltr" size="5" aria-label="{{ s.code }} {{ t('temp_max_c') }}"></td>
+  <td data-label="{{ t('hum_min_pct') }}"><input form="{{ f }}" name="hum_min" value="{{ s.hum_min }}" inputmode="decimal" dir="ltr" size="5" aria-label="{{ s.code }} {{ t('hum_min_pct') }}"></td>
+  <td data-label="{{ t('hum_max_pct') }}"><input form="{{ f }}" name="hum_max" value="{{ s.hum_max }}" inputmode="decimal" dir="ltr" size="5" aria-label="{{ s.code }} {{ t('hum_max_pct') }}"></td>
+  <td data-label="{{ t('stuck_after_h') }}"><input form="{{ f }}" name="stuck_min_hours" value="{{ s.stuck_min_hours }}" inputmode="numeric" dir="ltr" size="4" aria-label="{{ s.code }} {{ t('stuck_after_h') }}"></td>
+  <td><form id="{{ f }}" method="post" action="/thresholds/{{ s.code }}" hx-post="/thresholds/{{ s.code }}" hx-target="#th-{{ s.code }}" hx-swap="outerHTML">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">{{ t("save") }}</button></form></td>
+</tr>

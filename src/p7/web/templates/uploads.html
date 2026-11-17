@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ t("nav_uploads") }}{% endblock %}
+{% block content %}
+<h1>{{ t("uploads_title") }}</h1>
+<section class="card">
+  <p class="muted">{{ t("uploads_intro", mb=ni(max_mb)) }}</p>
+  <form method="post" action="/uploads" enctype="multipart/form-data" class="upload"
+        hx-post="/uploads" hx-encoding="multipart/form-data" hx-target="#upload-results" hx-indicator="#upload-busy"
+        hx-disabled-elt="find button">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="files" multiple accept=".xlsx,.zip" required>
+    <button class="primary" type="submit">{{ t("upload_button") }}</button>
+    <span id="upload-busy" class="busy">{{ t("uploading") }}</span>
+  </form>
+  <div id="upload-results" aria-live="polite"></div>
+</section>
+
+<section class="card">
+  <h2>{{ t("upload_log") }}</h2>
+  <table class="responsive log">
+    <thead><tr><th>#</th><th>{{ t("when") }}</th><th>{{ t("file") }}</th><th>{{ t("site") }}</th><th>{{ t("month") }}</th>
+      <th>{{ t("result") }}</th><th class="r">{{ t("inserted") }}</th><th class="r">{{ t("updated") }}</th><th class="r">{{ t("unchanged") }}</th>
+      <th class="r">{{ t("rows_rejected") }}</th><th>{{ t("by") }}</th></tr></thead>
+    <tbody>
+    {% for u in log %}
+    <tr>
+      <td data-label="#">{{ ni(u.upload_id) }}</td>
+      <td data-label="{{ t('when') }}">{{ nts(u.started_at.replace(tzinfo=None, microsecond=0)) }}</td>
+      <td data-label="{{ t('file') }}"><span dir="ltr">{{ u.filename }}</span>{% if u.archive_name %} <span class="muted small" dir="ltr">({{ u.archive_name }})</span>{% endif %}
+        {% if u.error %}<div class="small bad">{{ u.error }}</div>{% endif %}
+        {% for w in u.warnings %}<div class="small muted">{{ w }}</div>{% endfor %}</td>
+      <td data-label="{{ t('site') }}" dir="ltr">{{ u.site_code or "–" }}</td>
+      <td data-label="{{ t('month') }}">{{ n(u.month.strftime('%Y-%m') if u.month else '–') }}</td>
+      <td data-label="{{ t('result') }}"><span class="state {{ u.status }}">{{ t("upload_" ~ u.status) }}</span></td>
+      <td data-label="{{ t('inserted') }}" class="r">{{ ni(u.inserted) }}</td>
+      <td data-label="{{ t('updated') }}" class="r">{{ ni(u.updated) }}</td>
+      <td data-label="{{ t('unchanged') }}" class="r">{{ ni(u.unchanged) }}</td>
+      <td data-label="{{ t('rows_rejected') }}" class="r">{% if u.rejected %}<a href="/uploads/{{ u.upload_id }}/rejects.csv">{{ ni(u.rejected) }}</a>{% else %}{{ ni(0) }}{% endif %}</td>
+      <td data-label="{{ t('by') }}">{{ u.username or u.source }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

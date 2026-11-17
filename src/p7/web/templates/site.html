@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ s.code }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/?month={{ month_param }}">{{ t("nav_overview") }}</a> › <span dir="ltr">{{ s.code }}</span></nav>
+<div class="pagehead">
+  <h1><span dir="ltr" class="code">{{ s.code }}</span> {{ s.name }} <span class="muted">· {{ t.month(month) }}</span></h1>
+  {% set show_sites = false %}{% include "_filters.html" %}
+</div>
+<p class="sitemeta">
+  <span class="pill {{ row.status }}">{{ t("status_" ~ row.status) }}</span>
+  {% for x in row.status_reasons %}<span class="reason">{{ t("reason_" ~ x) }}</span>{% endfor %}
+  <span class="muted">{{ s.city }} · {{ t("kind_" ~ s.kind) }} · {{ t("thresholds") }}:
+    {{ n(row.th_temp_min) }}–{{ n(row.th_temp_max) }} <span dir="ltr">°C</span>,
+    {{ n(row.th_hum_min) }}–{{ n(row.th_hum_max) }} <span dir="ltr">%</span>,
+    {{ t("stuck_after") }} {{ ni(row.stuck_min_hours) }} {{ t("unit_h") }}</span>
+</p>
+
+<section class="kpis">
+  <div class="kpi">
+    <div class="label">{{ t("completeness") }}</div>
+    <div class="value">{{ n(row.completeness_pct, 1, "%") }}</div>
+    <div class="sub {% if row.unreliable_readings %}bad{% endif %}">{{ t("n_unreliable", n=ni(row.unreliable_readings)) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("avg_temp") }}</div>
+    <div class="value">{{ n(row.temp_avg, 1, " °C") }}</div>
+    <div class="sub">{{ t("range") }} {{ n(row.temp_min) }} – {{ n(row.temp_max) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("avg_hum") }}</div>
+    <div class="value">{{ n(row.hum_avg, 1, " %") }}</div>
+    <div class="sub">{{ t("range") }} {{ n(row.hum_min) }} – {{ n(row.hum_max) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("time_out_of_range") }}</div>
+    <div class="value">{{ nh(row.oor_minutes) }} <small>{{ t("unit_h") }}</small></div>
+    <div class="sub">{{ ni(row.oor_events) }} {{ t("events_lower") }} · {{ t("longest") }} {{ nh(row.longest_event_minutes) }} {{ t("unit_h") }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("readings_received") }}</div>
+    <div class="value">{{ ni(row.readings) }}</div>
+    <div class="sub">{{ t("of_expected", n=ni(row.expected_readings)) }}</div>
+  </div>
+</section>
+
+{% if row.unreliable_readings %}
+<p class="alert warn" role="note"><strong>{{ t("unreliable_title") }}</strong> {{ t("unreliable_note") }}</p>
+{% endif %}
+
+<section class="card"><div class="chart tall" data-chart="temp"></div></section>
+<section class="card"><div class="chart tall" data-chart="hum"></div></section>
+<section class="grid2">
+  <div class="card"><div class="chart" data-chart="daily"></div></div>
+  <div class="card"><div class="chart" data-chart="profile"></div></div>
+</section>
+
+<section class="grid2">
+  <div class="card">
+    <h2>{{ t("oor_events") }} <span class="muted">({{ ni(events | length) }})</span></h2>
+    {% if events %}
+    <table class="responsive">
+      <thead><tr><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("duration_h") }}</th><th>{{ t("what") }}</th><th class="r">{{ t("max_temp") }}</th><th class="r">{{ t("max_hum") }}</th></tr></thead>
+      <tbody>
+      {% for e in events %}
+      <tr><td data-label="{{ t('start') }}">{{ nts(e.start_ts) }}</td><td data-label="{{ t('end') }}">{{ nts(e.end_ts) }}</td>
+          <td data-label="{{ t('duration_h') }}" class="r">{{ nh(e.minutes) }}</td>
+          <td data-label="{{ t('what') }}"><span>{{ t("event_" ~ ("both" if e.temp_out_readings and e.hum_out_readings else ("temperature" if e.temp_out_readings else "humidity"))) }}</span></td>
+          <td data-label="{{ t('max_temp') }}" class="r">{{ n(e.max_temperature) }}</td><td data-label="{{ t('max_hum') }}" class="r">{{ n(e.max_humidity) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">{{ t("none") }}</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2>{{ t("stuck_sensor_periods") }}</h2>
+    {% if stuck %}
+    <table class="responsive">
+      <thead><tr><th>{{ t("start") }}</th><th>{{ t("end") }}</th><th class="r">{{ t("readings") }}</th><th class="r">{{ t("repeated_value") }}</th></tr></thead>
+      <tbody>
+      {% for r in stuck %}
+      <tr><td data-label="{{ t('start') }}">{{ nts(r.start_ts) }}</td><td data-label="{{ t('end') }}">{{ nts(r.end_ts) }}</td>
+          <td data-label="{{ t('readings') }}" class="r">{{ ni(r.readings) }}</td>
+          <td data-label="{{ t('repeated_value') }}" class="r"><span>{{ n(r.temperature, 1, " °C") }} / {{ n(r.humidity, 1, " %") }}</span></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">{{ t("none") }}</p>{% endif %}
+  </div>
+</section>
+
+{% if month %}
+<section class="card">
+  <h2>{{ t("reports_for_month") }}</h2>
+  <p class="downloads">
+    {% for l in LANGS %}<a class="button" href="/reports/download?month={{ month_param }}&site={{ s.code }}&lang={{ l }}">PDF · {{ t("lang_name_" ~ l) }}</a> {% endfor %}
+  </p>
+</section>
+{% endif %}
+<script type="application/json" id="chart-data">{{ charts | tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="/static/vendor/echarts.min.js"></script>{% endblock %}

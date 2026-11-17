@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ status }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1><span class="num" dir="ltr">{{ status }}</span> · {{ t("error_" ~ status) if status in (400, 403, 404, 413) else t("error_other") }}</h1>
+  <p class="muted" dir="ltr">{{ detail }}</p>
+  <p><a href="/">{{ t("back_to_overview") }}</a></p>
+</section>
+{% endblock %}

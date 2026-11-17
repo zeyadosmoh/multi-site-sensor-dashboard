@@ -10,8 +10,10 @@ from p7.config import Settings, get_settings
 SQL = files("p7.db").joinpath("sql")
 
 
-def connect(settings: Settings | None = None, dbname: str | None = None, autocommit: bool = False,
+def connect(settings: Settings | None = None, dbname: str | None = None, autocommit: bool = True,
             dict_rows: bool = True) -> psycopg.Connection:
+    """Autocommit by default: every `with conn.transaction()` block is then a real, separate transaction (never a
+    savepoint inside an implicit transaction left open by an earlier SELECT)."""
     s = settings or get_settings()
     # jit=off: JIT compilation costs ~1 s per query here and these queries run in milliseconds without it
     return psycopg.connect(s.dsn(dbname), autocommit=autocommit, row_factory=dict_row if dict_rows else None,

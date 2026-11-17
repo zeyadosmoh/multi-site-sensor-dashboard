@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ t("nav_users") }}{% endblock %}
+{% block content %}
+<h1>{{ t("users_title") }}</h1>
+{% if msg %}<p class="alert ok" role="status">{{ msg }}</p>{% endif %}
+{% if err %}<p class="alert error" role="alert">{{ err }}</p>{% endif %}
+<section class="card">
+  <table class="responsive">
+    <thead><tr><th>{{ t("username") }}</th><th>{{ t("role") }}</th><th>{{ t("active") }}</th><th>{{ t("last_login") }}</th><th>{{ t("actions") }}</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+      <td data-label="{{ t('username') }}" dir="ltr">{{ u.username }}</td>
+      <td data-label="{{ t('role') }}">{{ t("role_" ~ u.role) }}</td>
+      <td data-label="{{ t('active') }}">{{ t("yes") if u.active else t("no") }}</td>
+      <td data-label="{{ t('last_login') }}">{{ nts(u.last_login_at.replace(tzinfo=None, microsecond=0)) if u.last_login_at else "–" }}</td>
+      <td data-label="{{ t('actions') }}" class="actions">
+        <form method="post" action="/users/{{ u.user_id }}/active" class="inline">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="active" value="{{ 'false' if u.active else 'true' }}">
+          <button type="submit">{{ t("deactivate") if u.active else t("activate") }}</button>
+        </form>
+        <form method="post" action="/users/{{ u.user_id }}/password" class="inline">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="password" name="password" minlength="10" required autocomplete="new-password" placeholder="{{ t('new_password') }}" aria-label="{{ t('new_password') }} {{ u.username }}" dir="ltr">
+          <button type="submit">{{ t("set_password") }}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+<section class="card narrow">
+  <h2>{{ t("add_user") }}</h2>
+  <form method="post" action="/users" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t("username") }}<input name="username" required pattern="[a-z0-9_.\-]{3,40}" dir="ltr" autocomplete="off"></label>
+    <label>{{ t("password") }}<input name="password" type="password" required minlength="10" autocomplete="new-password" dir="ltr"></label>
+    <label>{{ t("role") }}<select name="role"><option value="management">{{ t("role_management") }}</option><option value="admin">{{ t("role_admin") }}</option></select></label>
+    <button class="primary" type="submit">{{ t("add_user") }}</button>
+  </form>
+</section>
+{% endblock %}

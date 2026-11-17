@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ t("nav_compare") }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>{{ t("compare_title") }} <span class="muted">· {{ t.month(month) }}</span></h1>
+  {% set show_sites = true %}{% include "_filters.html" %}
+</div>
+<section class="grid2">
+  <div class="card"><div class="chart" data-chart="temp_range"></div></div>
+  <div class="card"><div class="chart" data-chart="quality"></div></div>
+</section>
+<section class="grid2">
+  <div class="card"><div class="chart" data-chart="profile"></div></div>
+  <div class="card"><div class="chart" data-chart="trend"></div></div>
+</section>
+<p class="muted small">{{ t("compare_note") }}</p>
+<script type="application/json" id="chart-data">{{ charts | tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="/static/vendor/echarts.min.js"></script>{% endblock %}

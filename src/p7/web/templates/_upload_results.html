@@ -1,0 +1,27 @@
+{% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
+{% if results %}
+<h3>{{ t("upload_results", n=ni(results | length)) }}</h3>
+<table class="responsive results">
+  <thead><tr><th>{{ t("file") }}</th><th>{{ t("result") }}</th><th>{{ t("site") }}</th><th>{{ t("month") }}</th>
+    <th class="r">{{ t("inserted") }}</th><th class="r">{{ t("updated") }}</th><th class="r">{{ t("unchanged") }}</th><th class="r">{{ t("rows_rejected") }}</th></tr></thead>
+  <tbody>
+  {% for r in results %}
+  <tr class="res-{{ r.status }}">
+    <td data-label="{{ t('file') }}"><span dir="ltr">{{ r.filename }}</span>
+      {% if r.error %}<div class="small bad">{{ r.error }}</div>{% endif %}
+      {% for w in r.warnings %}<div class="small muted">{{ w }}</div>{% endfor %}
+      {% for reason, c in r.reject_reasons.items() %}<div class="small">{{ t("reject_" ~ reason) }}: {{ ni(c) }}</div>{% endfor %}</td>
+    <td data-label="{{ t('result') }}"><span class="state {{ r.status }}">{{ t("upload_" ~ r.status) }}</span></td>
+    <td data-label="{{ t('site') }}" dir="ltr">{{ r.site_code or "–" }}</td>
+    <td data-label="{{ t('month') }}">{{ n(r.month or "–") }}</td>
+    <td data-label="{{ t('inserted') }}" class="r">{{ ni(r.inserted) }}</td>
+    <td data-label="{{ t('updated') }}" class="r">{{ ni(r.updated) }}</td>
+    <td data-label="{{ t('unchanged') }}" class="r">{{ ni(r.unchanged) }}</td>
+    <td data-label="{{ t('rows_rejected') }}" class="r">{% if r.rejected %}<a href="/uploads/{{ r.upload_id }}/rejects.csv">{{ ni(r.rejected) }}</a>{% else %}{{ ni(0) }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if reports_queued %}<p class="alert ok" role="status">{{ t("reports_after_upload") }}</p>{% endif %}
+<p><a href="/uploads">{{ t("refresh_log") }}</a></p>
+{% endif %}

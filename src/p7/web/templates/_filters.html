@@ -1,0 +1,22 @@
+{# month + site filters; a GET form that submits itself when a value changes (app.js) #}
+<form class="filters" method="get" data-autosubmit>
+  <label>{{ t("month") }}
+    <select name="month">
+      <option value="all" {% if month is none %}selected{% endif %}>{{ t("all_months") }}</option>
+      {% for m in months | reverse %}
+      <option value="{{ m.strftime('%Y-%m') }}" {% if m == month %}selected{% endif %}>{{ t.month(m) }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if show_sites %}
+  <details class="sitepick">
+    <summary>{{ t("sites") }}: {% if sites %}<span class="num" dir="ltr">{{ sites | length }}</span> / <span class="num" dir="ltr">{{ codes | length }}</span>{% else %}{{ t("all_sites") }}{% endif %}</summary>
+    <div class="sitelist">
+      {% for c in codes %}
+      <label class="check"><input type="checkbox" name="site" value="{{ c }}" {% if not sites or c in sites %}checked{% endif %}><span dir="ltr">{{ c }}</span></label>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+  <noscript><button type="submit">{{ t("apply") }}</button></noscript>
+</form>

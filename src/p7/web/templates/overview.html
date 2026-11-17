@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ t("nav_overview") }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <h1>{{ t("overview_title") }} <span class="muted">· {{ t.month(month) }}</span></h1>
+  {% set show_sites = true %}{% include "_filters.html" %}
+</div>
+
+<section class="kpis" aria-label="{{ t('kpis_label') }}">
+  <div class="kpi">
+    <div class="label">{{ t("sites") }}</div>
+    <div class="value">{{ n(k.sites, 0) }}</div>
+    <div class="chips">
+      <span class="chip red">{{ t("status_red") }} {{ ni(k.status_counts.red) }}</span>
+      <span class="chip amber">{{ t("status_amber") }} {{ ni(k.status_counts.amber) }}</span>
+      <span class="chip green">{{ t("status_green") }} {{ ni(k.status_counts.green) }}</span>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("completeness") }}</div>
+    <div class="value">{{ n(k.completeness_pct, 1, "%") }}</div>
+    <div class="sub {% if k.unreliable_readings %}bad{% endif %}">{{ t("n_unreliable", n=ni(k.unreliable_readings)) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("avg_temp") }}</div>
+    <div class="value">{{ n(k.temp_avg, 1, " °C") }}</div>
+    <div class="sub">{{ t("range") }} {{ n(k.temp_min) }} – {{ n(k.temp_max) }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("avg_hum") }}</div>
+    <div class="value">{{ n(k.hum_avg, 1, " %") }}</div>
+    <div class="sub">{{ t("valid_only") }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("time_out_of_range") }}</div>
+    <div class="value">{{ nh(k.oor_minutes) }} <small>{{ t("unit_h") }}</small></div>
+    <div class="sub">{{ ni(k.oor_events) }} {{ t("events_lower") }}</div>
+  </div>
+  <div class="kpi">
+    <div class="label">{{ t("stuck_sensors") }}</div>
+    <div class="value {% if k.stuck_runs %}bad{% endif %}">{{ ni(k.stuck_runs) }}</div>
+    <div class="sub">{{ t("stuck_runs_lower") }}</div>
+  </div>
+</section>
+
+<section class="grid2">
+  <div class="card">
+    <h2>{{ t("map_title") }}</h2>
+    <div id="map" class="map" role="region" aria-label="{{ t('map_title') }}"></div>
+    <script type="application/json" id="map-data">{{ {"markers": markers, "labels": map_labels} | tojson }}</script>
+    <p class="legend"><span class="dot red"></span>{{ t("status_red") }} <span class="dot amber"></span>{{ t("status_amber") }} <span class="dot green"></span>{{ t("status_green") }}</p>
+  </div>
+  <div class="card">
+    <h2>{{ t("longest_events") }}</h2>
+    {% if events %}
+    <ul class="events">
+      {% for e in events %}
+      <li><a href="/sites/{{ e.code }}?month={{ month_param }}" dir="ltr" class="code">{{ e.code }}</a>
+          {{ nts(e.start_ts) }} → {{ nts(e.end_ts) }} · <strong>{{ nh(e.minutes) }} {{ t("unit_h") }}</strong>
+          · {{ t("event_" ~ ("both" if e.temp_out_readings and e.hum_out_readings else ("temperature" if e.temp_out_readings else "humidity"))) }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">{{ t("none") }}</p>{% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <div class="cardhead">
+    <h2>{{ t("site_table_title") }}</h2>
+    <a class="button" href="/export/sites.csv?{{ query }}" download>{{ t("download_csv") }}</a>
+  </div>
+  <table class="sites responsive">
+    <thead><tr>
+      <th>{{ t("status") }}</th><th>{{ t("site") }}</th>
+      <th class="r">{{ t("completeness") }}</th><th class="r">{{ t("unreliable_short") }}</th>
+      <th class="r">{{ t("avg_temp") }}</th><th class="r">{{ t("min_max_temp") }}</th><th class="r">{{ t("avg_hum") }}</th>
+      <th class="r">{{ t("time_out_of_range") }}</th><th class="r">{{ t("oor_events") }}</th>
+    </tr></thead>
+    <tbody>
+    {% for r in table %}
+    <tr class="row-{{ r.status }}">
+      <td data-label="{{ t('status') }}"><span class="pill {{ r.status }}" title="{% for x in r.status_reasons %}{{ t('reason_' ~ x) }}{% if not loop.last %}, {% endif %}{% endfor %}">{{ t("status_" ~ r.status) }}</span></td>
+      <td data-label="{{ t('site') }}" class="sitecell"><a href="/sites/{{ r.code }}?month={{ month_param }}"><span dir="ltr" class="code">{{ r.code }}</span> {{ r.name }}</a><div class="muted small">{{ r.city }}{% for x in r.status_reasons %} · {{ t("reason_" ~ x) }}{% endfor %}</div></td>
+      <td data-label="{{ t('completeness') }}" class="r">{{ n(r.completeness_pct, 1, "%") }}</td>
+      <td data-label="{{ t('unreliable_short') }}" class="r {% if r.unreliable_readings %}bad{% endif %}">{{ ni(r.unreliable_readings) }}</td>
+      <td data-label="{{ t('avg_temp') }}" class="r">{{ n(r.temp_avg) }}</td>
+      <td data-label="{{ t('min_max_temp') }}" class="r"><span>{{ n(r.temp_min) }} – {{ n(r.temp_max) }}</span></td>
+      <td data-label="{{ t('avg_hum') }}" class="r">{{ n(r.hum_avg) }}</td>
+      <td data-label="{{ t('time_out_of_range') }}" class="r">{{ nh(r.oor_minutes) }}</td>
+      <td data-label="{{ t('oor_events') }}" class="r">{{ ni(r.oor_events) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">{{ t("table_units_note") }}</p>
+</section>
+
+<section class="grid2">
+  <div class="card"><div class="chart" data-chart="daily_temp"></div></div>
+  <div class="card"><div class="chart" data-chart="site_compare"></div></div>
+</section>
+<script type="application/json" id="chart-data">{{ charts | tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/vendor/echarts.min.js"></script>
+{% endblock %}

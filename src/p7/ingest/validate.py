@@ -160,11 +160,13 @@ def validate_rows(rows: list[RawRow], month: date, interval_minutes: int = 60) -
     for r in rows:
         d = parse_date(r.date, slash_order)
         if d is None:
-            out.rejects.append(Reject(r, "bad_date", f"date {r.date!r} is not a valid date"))
+            out.rejects.append(Reject(r, "bad_date", "date is blank" if r.date is None
+                                      else f"date {r.date!r} is not a valid date"))
             continue
         t = parse_time(r.time)
         if t is None:
-            out.rejects.append(Reject(r, "bad_time", f"time {r.time!r} is not a valid time of day"))
+            out.rejects.append(Reject(r, "bad_time", "time is blank" if r.time is None
+                                      else f"time {r.time!r} is not a valid time of day"))
             continue
         if (t.hour * 60 + t.minute) % interval_minutes or t.second:
             out.rejects.append(Reject(r, "bad_time",
