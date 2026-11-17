@@ -34,6 +34,7 @@ def main() -> int:
     ap.add_argument("--lang", default="en,ar")
     ap.add_argument("--full", action="store_true", help="full-page screenshots")
     ap.add_argument("--upload", help="a file to upload for the upload-results screenshot (e.g. the sample zip)")
+    ap.add_argument("--timeout", type=float, default=30, help="seconds to wait for each page (raise on a slow machine)")
     a = ap.parse_args()
     s = get_settings()
     base = a.base or f"http://{s.app_host}:{s.app_port}"
@@ -46,6 +47,8 @@ def main() -> int:
             ctx = browser.new_context(viewport=vp, device_scale_factor=2 if vp_name == "phone" else 1,
                                       is_mobile=vp_name == "phone", has_touch=vp_name == "phone")
             page = ctx.new_page()
+            page.set_default_timeout(a.timeout * 1000)
+            page.set_default_navigation_timeout(a.timeout * 1000)
             page.on("console", lambda m: m.type == "error" and problems.append(f"console: {m.text}"))
             page.on("pageerror", lambda e: problems.append(f"pageerror: {e}"))
             page.goto(f"{base}/login")
