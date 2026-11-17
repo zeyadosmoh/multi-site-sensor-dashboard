@@ -2,6 +2,8 @@
    No inline scripts (strict CSP); all data arrives as JSON in the page. */
 (function () {
   "use strict";
+  // Chart axes stay left-to-right (time runs left to right) in both languages, like the PDF charts;
+  // only titles/legends follow the page direction.
   var rtl = document.documentElement.dir === "rtl";
   var palette = ["#2f6fb0", "#d9822b", "#2e8b57", "#c23b3b", "#7b5ea7", "#1b9aaa", "#b8860b", "#e05780",
                  "#4f772d", "#6c757d", "#0b7285", "#a0522d", "#5c7cfa"];
@@ -38,6 +40,15 @@
     };
   }
 
+  var monthNames = null;  // from chart-data, so axis labels follow the page language
+
+  function timeAxis() {
+    return { type: "time", axisLabel: { hideOverlap: true, formatter: function (v) {
+      var d = new Date(v);
+      return d.getDate() === 1 && monthNames ? monthNames[d.getMonth()] : String(d.getDate());
+    } } };
+  }
+
   function axisY(unit, extra) {
     return Object.assign({ type: "value", scale: true, name: unit || "", nameTextStyle: { align: "center" },
                            splitLine: { lineStyle: { color: "#eef1f5" } } }, extra || {});
@@ -46,24 +57,24 @@
   var builders = {
     lines: function (c) {  // multi-series time lines (overview daily averages)
       var o = base(c.title);
-      o.xAxis = { type: "time", inverse: rtl };
-      o.yAxis = axisY(c.unit, { position: rtl ? "right" : "left" });
+      o.xAxis = timeAxis();
+      o.yAxis = axisY(c.unit, { position: "left" });
       o.series = c.series.map(function (s) { return { name: s.name, type: "line", showSymbol: false, data: s.data, lineStyle: { width: 1.5 } }; });
       return o;
     },
     lines_cat: function (c) {
       var o = base(c.title);
-      o.xAxis = { type: "category", data: c.x, inverse: rtl };
-      o.yAxis = axisY(c.unit, { position: rtl ? "right" : "left" });
+      o.xAxis = { type: "category", data: c.x };
+      o.yAxis = axisY(c.unit, { position: "left" });
       o.series = c.series.map(function (s) { return { name: s.name, type: "line", data: s.data, connectNulls: false }; });
       return o;
     },
     bars: function (c) {
       var o = base(c.title);
       var two = c.series.some(function (s) { return s.axis === 1; });
-      o.xAxis = { type: "category", data: c.categories, inverse: rtl, axisLabel: { rotate: 45, fontSize: 10 } };
-      o.yAxis = [axisY(c.unit, { position: rtl ? "right" : "left", scale: false })];
-      if (two) o.yAxis.push(axisY("", { position: rtl ? "left" : "right", splitLine: { show: false }, scale: false }));
+      o.xAxis = { type: "category", data: c.categories, axisLabel: { rotate: 45, fontSize: 10 } };
+      o.yAxis = [axisY(c.unit, { position: "left", scale: false })];
+      if (two) o.yAxis.push(axisY("", { position: "right", splitLine: { show: false }, scale: false }));
       o.grid.bottom = 80;
       o.series = c.series.map(function (s) {
         return s.axis === 1 ? { name: s.name, type: "line", yAxisIndex: 1, data: s.data, symbolSize: 7, lineStyle: { width: 0 } }
@@ -73,9 +84,9 @@
     },
     timeseries: function (c) {  // one site, hourly: limits, out-of-range points, unreliable periods (grey)
       var o = base(c.title);
-      o.xAxis = { type: "time", inverse: rtl };
+      o.xAxis = timeAxis();
       // keep both limit lines in view
-      o.yAxis = axisY(c.unit, { position: rtl ? "right" : "left",
+      o.yAxis = axisY(c.unit, { position: "left",
         min: function (v) { return Math.floor(Math.min(v.min, c.min) - 1); },
         max: function (v) { return Math.ceil(Math.max(v.max, c.max) + 1); } });
       o.dataZoom = [{ type: "inside" }, { type: "slider", height: 18, bottom: 26 }];
@@ -85,7 +96,7 @@
         { name: c.name, type: "line", showSymbol: false, data: c.data, lineStyle: { width: 1.2 }, connectNulls: false,
           markLine: { silent: true, symbol: "none", lineStyle: { color: "#c23b3b", type: "dashed" },
                       data: [{ yAxis: c.min, name: c.limit_names[0] }, { yAxis: c.max, name: c.limit_names[1] }],
-                      label: { formatter: "{b}: {c}", position: rtl ? "insideStartTop" : "insideEndTop" } },
+                      label: { formatter: "{b}: {c}", position: "insideEndTop" } },
           markArea: { silent: true, itemStyle: { color: "rgba(100,110,120,0.22)" }, label: { color: "#444" }, data: band } },
         { name: c.out_name, type: "scatter", data: c.out, symbolSize: 4, itemStyle: { color: "#c23b3b" } },
         { name: c.stuck_name, type: "line", data: [], itemStyle: { color: "rgba(100,110,120,0.5)" } }
@@ -94,8 +105,8 @@
     },
     band: function (c) {  // daily min/avg/max
       var o = base(c.title);
-      o.xAxis = { type: "category", data: c.x, inverse: rtl, boundaryGap: false };
-      o.yAxis = axisY(c.unit, { position: rtl ? "right" : "left" });
+      o.xAxis = { type: "category", data: c.x, boundaryGap: false };
+      o.yAxis = axisY(c.unit, { position: "left" });
       o.series = [
         { name: c.names[0], type: "line", data: c.min, showSymbol: false, lineStyle: { width: 1, type: "dotted" } },
         { name: c.names[1], type: "line", data: c.avg, showSymbol: false, lineStyle: { width: 2 } },
@@ -107,9 +118,9 @@
     profile: function (c) {  // average by hour of day
       var o = base(c.title);
       var two = c.series.some(function (s) { return s.axis === 1; });
-      o.xAxis = { type: "category", data: c.x, inverse: rtl, axisLabel: { interval: 2 } };
-      o.yAxis = [axisY(c.unit, { position: rtl ? "right" : "left" })];
-      if (two) o.yAxis.push(axisY(c.unit2, { position: rtl ? "left" : "right", splitLine: { show: false } }));
+      o.xAxis = { type: "category", data: c.x, axisLabel: { interval: 2 } };
+      o.yAxis = [axisY(c.unit, { position: "left" })];
+      if (two) o.yAxis.push(axisY(c.unit2, { position: "right", splitLine: { show: false } }));
       o.series = c.series.map(function (s) { return { name: s.name, type: "line", yAxisIndex: s.axis || 0, data: s.data, smooth: true, showSymbol: false }; });
       return o;
     }
@@ -117,6 +128,7 @@
 
   var data = readJSON("chart-data");
   var charts = [];
+  if (data && data.month_names) monthNames = data.month_names;
   if (data && window.echarts) {
     document.querySelectorAll("[data-chart]").forEach(function (el) {
       var c = data[el.getAttribute("data-chart")];

@@ -3,15 +3,14 @@
 {% block content %}
 <nav class="crumbs"><a href="/?month={{ month_param }}">{{ t("nav_overview") }}</a> › <span dir="ltr">{{ s.code }}</span></nav>
 <div class="pagehead">
-  <h1><span dir="ltr" class="code">{{ s.code }}</span> {{ s.name }} <span class="muted">· {{ t.month(month) }}</span></h1>
+  <h1><span dir="ltr" class="code">{{ s.code }}</span> {{ loc(s, "name") }} <span class="muted">· {{ t.month(month) }}</span></h1>
   {% set show_sites = false %}{% include "_filters.html" %}
 </div>
 <p class="sitemeta">
   <span class="pill {{ row.status }}">{{ t("status_" ~ row.status) }}</span>
   {% for x in row.status_reasons %}<span class="reason">{{ t("reason_" ~ x) }}</span>{% endfor %}
-  <span class="muted">{{ s.city }} · {{ t("kind_" ~ s.kind) }} · {{ t("thresholds") }}:
-    {{ n(row.th_temp_min) }}–{{ n(row.th_temp_max) }} <span dir="ltr">°C</span>,
-    {{ n(row.th_hum_min) }}–{{ n(row.th_hum_max) }} <span dir="ltr">%</span>,
+  <span class="muted">{{ loc(s, "city") }} · {{ t("kind_" ~ s.kind) }} · {{ t("thresholds") }}:
+    {{ nr(row.th_temp_min, row.th_temp_max, 1, " °C") }}{{ t("list_sep") }}{{ nr(row.th_hum_min, row.th_hum_max, 1, " %") }}{{ t("list_sep") }}
     {{ t("stuck_after") }} {{ ni(row.stuck_min_hours) }} {{ t("unit_h") }}</span>
 </p>
 
@@ -24,12 +23,12 @@
   <div class="kpi">
     <div class="label">{{ t("avg_temp") }}</div>
     <div class="value">{{ n(row.temp_avg, 1, " °C") }}</div>
-    <div class="sub">{{ t("range") }} {{ n(row.temp_min) }} – {{ n(row.temp_max) }}</div>
+    <div class="sub">{{ t("range") }} {{ nr(row.temp_min, row.temp_max) }}</div>
   </div>
   <div class="kpi">
     <div class="label">{{ t("avg_hum") }}</div>
     <div class="value">{{ n(row.hum_avg, 1, " %") }}</div>
-    <div class="sub">{{ t("range") }} {{ n(row.hum_min) }} – {{ n(row.hum_max) }}</div>
+    <div class="sub">{{ t("range") }} {{ nr(row.hum_min, row.hum_max) }}</div>
   </div>
   <div class="kpi">
     <div class="label">{{ t("time_out_of_range") }}</div>
@@ -80,7 +79,7 @@
       {% for r in stuck %}
       <tr><td data-label="{{ t('start') }}">{{ nts(r.start_ts) }}</td><td data-label="{{ t('end') }}">{{ nts(r.end_ts) }}</td>
           <td data-label="{{ t('readings') }}" class="r">{{ ni(r.readings) }}</td>
-          <td data-label="{{ t('repeated_value') }}" class="r"><span>{{ n(r.temperature, 1, " °C") }} / {{ n(r.humidity, 1, " %") }}</span></td></tr>
+          <td data-label="{{ t('repeated_value') }}" class="r">{{ n(number(r.temperature) ~ " °C / " ~ number(r.humidity) ~ " %") }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

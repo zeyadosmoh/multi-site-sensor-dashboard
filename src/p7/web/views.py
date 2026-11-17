@@ -24,6 +24,10 @@ _FAILS: dict[tuple[str, str], list[float]] = {}
 MAX_FAILS, WINDOW = 5, 300
 
 
+def chart_payload(t: Translator, data: dict) -> dict:
+    return {**data, "month_names": [t.plain(f"month_{i}") for i in range(1, 13)]}
+
+
 def safe_next(target: str | None) -> str:
     """Only local paths (no scheme, no host, no //) are allowed as redirect targets."""
     if not target:
@@ -121,12 +125,14 @@ def overview(request: Request, month: str | None = None, site: list[str] = Query
     t = Translator(lang_of(request))
     table = metrics.site_table(conn, f["month"], f["sites"])
     k = metrics.kpis(conn, f["month"], f["sites"])
-    markers = [{"code": r["code"], "name": r["name"], "city": r["city"], "lat": float(r["lat"]),
+    lang = lang_of(request)
+    markers = [{"code": r["code"], "name": fmt.localized(r, "name", lang), "city": fmt.localized(r, "city", lang),
+                "lat": float(r["lat"]),
                 "lon": float(r["lon"]), "status": r["status"], "status_label": t.plain(f"status_{r['status']}"),
                 "temp": fmt.number(r["temp_avg"]), "comp": fmt.number(r["completeness_pct"]),
                 "url": f"/sites/{r['code']}?month={f['month_param']}"} for r in table]
     ctx = {**f, "table": table, "k": k, "events": metrics.events(conn, f["month"], f["sites"], limit=5),
-           "charts": charts.overview(conn, t, f["month"], f["sites"], table), "markers": markers,
+           "charts": chart_payload(t, charts.overview(conn, t, f["month"], f["sites"], table)), "markers": markers,
            "map_labels": {"temp": t.plain("avg_temp"), "comp": t.plain("completeness"),
                           "open": t.plain("open_site")}}
     return page(request, "overview.html", ctx, user=user)
@@ -146,7 +152,7 @@ def site_page(code: str, request: Request, month: str | None = None, user: dict 
     row = rows[0]
     ctx = {**f, "s": s, "row": row, "events": metrics.events(conn, f["month"], [code]),
            "stuck": metrics.stuck_runs(conn, f["month"], [code]),
-           "charts": charts.site(conn, t, code, f["month"], row)}
+           "charts": chart_payload(t, charts.site(conn, t, code, f["month"], row))}
     return page(request, "site.html", ctx, user=user)
 
 
@@ -156,7 +162,7 @@ def compare(request: Request, month: str | None = None, site: list[str] = Query(
     f = filters(conn, month, site)
     t = Translator(lang_of(request))
     table = metrics.site_table(conn, f["month"], f["sites"])
-    ctx = {**f, "table": table, "charts": charts.compare(conn, t, f["month"], f["sites"], table)}
+    ctx = {**f, "table": table, "charts": chart_payload(t, charts.compare(conn, t, f["month"], f["sites"], table))}
     return page(request, "compare.html", ctx, user=user)
 
 

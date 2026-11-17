@@ -48,7 +48,8 @@ def _uploads(conn, month: date, site_id: int | None) -> list[dict]:
     rows = conn.execute(
         """SELECT u.upload_id, u.filename, s.code, u.inserted, u.updated, u.unchanged, u.rejected, u.finished_at,
                   (SELECT coalesce(jsonb_object_agg(reason, n), '{}') FROM
-                     (SELECT reason, count(*) n FROM row_rejects r WHERE r.upload_id = u.upload_id GROUP BY 1) x) AS reasons
+                     (SELECT reason, count(*) n FROM row_rejects r WHERE r.upload_id = u.upload_id GROUP BY 1) x)
+                  AS reasons
            FROM uploads u JOIN sites s USING (site_id)
            WHERE u.status = 'loaded' AND u.month = %s AND (%s::int IS NULL OR u.site_id = %s)
            ORDER BY s.code, u.upload_id""", (month, site_id, site_id)).fetchall()
@@ -65,7 +66,8 @@ def site_month(conn: psycopg.Connection, code: str, month: date) -> dict:
         "notice": SYNTHETIC_NOTE,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "month": f"{month:%Y-%m}",
-        "site": {"code": site["code"], "name": site["name"], "city": site["city"], "kind": site["kind"]},
+        "site": {"code": site["code"], "name": site["name"], "city": site["city"], "kind": site["kind"],
+                 "name_ar": site["name_ar"], "city_ar": site["city_ar"]},
         "thresholds": {"temp_min": fmt.number(site["temp_min"]), "temp_max": fmt.number(site["temp_max"]),
                        "hum_min": fmt.number(site["hum_min"]), "hum_max": fmt.number(site["hum_max"]),
                        "stuck_min_hours": str(site["stuck_min_hours"])},
@@ -108,7 +110,8 @@ def summary_month(conn: psycopg.Connection, month: date) -> dict:
             "stuck_runs": fmt.number(k["stuck_runs"], 0),
         },
         "status_counts": k["status_counts"],
-        "sites": [{"code": r["code"], "name": r["name"], "city": r["city"], "status": r["status"],
+        "sites": [{"code": r["code"], "name": r["name"], "city": r["city"], "name_ar": r["name_ar"],
+                   "city_ar": r["city_ar"], "status": r["status"],
                    "status_reasons": r["status_reasons"], **_kpis(r)} for r in table],
         "events": [_event(e) for e in metrics.events(conn, month, None, limit=10)],
         "stuck_runs": [_stuck(r) for r in metrics.stuck_runs(conn, month)],

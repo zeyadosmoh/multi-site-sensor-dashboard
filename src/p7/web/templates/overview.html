@@ -25,7 +25,7 @@
   <div class="kpi">
     <div class="label">{{ t("avg_temp") }}</div>
     <div class="value">{{ n(k.temp_avg, 1, " °C") }}</div>
-    <div class="sub">{{ t("range") }} {{ n(k.temp_min) }} – {{ n(k.temp_max) }}</div>
+    <div class="sub">{{ t("range") }} {{ nr(k.temp_min, k.temp_max) }}</div>
   </div>
   <div class="kpi">
     <div class="label">{{ t("avg_hum") }}</div>
@@ -57,7 +57,7 @@
     <ul class="events">
       {% for e in events %}
       <li><a href="/sites/{{ e.code }}?month={{ month_param }}" dir="ltr" class="code">{{ e.code }}</a>
-          {{ nts(e.start_ts) }} → {{ nts(e.end_ts) }} · <strong>{{ nh(e.minutes) }} {{ t("unit_h") }}</strong>
+          {{ nr(ts(e.start_ts), ts(e.end_ts)) }} · <strong>{{ nh(e.minutes) }} {{ t("unit_h") }}</strong>
           · {{ t("event_" ~ ("both" if e.temp_out_readings and e.hum_out_readings else ("temperature" if e.temp_out_readings else "humidity"))) }}</li>
       {% endfor %}
     </ul>
@@ -80,12 +80,12 @@
     <tbody>
     {% for r in table %}
     <tr class="row-{{ r.status }}">
-      <td data-label="{{ t('status') }}"><span class="pill {{ r.status }}" title="{% for x in r.status_reasons %}{{ t('reason_' ~ x) }}{% if not loop.last %}, {% endif %}{% endfor %}">{{ t("status_" ~ r.status) }}</span></td>
-      <td data-label="{{ t('site') }}" class="sitecell"><a href="/sites/{{ r.code }}?month={{ month_param }}"><span dir="ltr" class="code">{{ r.code }}</span> {{ r.name }}</a><div class="muted small">{{ r.city }}{% for x in r.status_reasons %} · {{ t("reason_" ~ x) }}{% endfor %}</div></td>
+      <td data-label="{{ t('status') }}"><span class="pill {{ r.status }}" title="{% for x in r.status_reasons %}{{ t('reason_' ~ x) }}{% if not loop.last %}{{ t("list_sep") }}{% endif %}{% endfor %}">{{ t("status_" ~ r.status) }}</span></td>
+      <td data-label="{{ t('site') }}" class="sitecell"><a href="/sites/{{ r.code }}?month={{ month_param }}"><span dir="ltr" class="code">{{ r.code }}</span> {{ loc(r, "name") }}</a><div class="muted small">{{ loc(r, "city") }}{% for x in r.status_reasons %} · {{ t("reason_" ~ x) }}{% endfor %}</div></td>
       <td data-label="{{ t('completeness') }}" class="r">{{ n(r.completeness_pct, 1, "%") }}</td>
       <td data-label="{{ t('unreliable_short') }}" class="r {% if r.unreliable_readings %}bad{% endif %}">{{ ni(r.unreliable_readings) }}</td>
       <td data-label="{{ t('avg_temp') }}" class="r">{{ n(r.temp_avg) }}</td>
-      <td data-label="{{ t('min_max_temp') }}" class="r"><span>{{ n(r.temp_min) }} – {{ n(r.temp_max) }}</span></td>
+      <td data-label="{{ t('min_max_temp') }}" class="r">{{ nr(r.temp_min, r.temp_max) }}</td>
       <td data-label="{{ t('avg_hum') }}" class="r">{{ n(r.hum_avg) }}</td>
       <td data-label="{{ t('time_out_of_range') }}" class="r">{{ nh(r.oor_minutes) }}</td>
       <td data-label="{{ t('oor_events') }}" class="r">{{ ni(r.oor_events) }}</td>

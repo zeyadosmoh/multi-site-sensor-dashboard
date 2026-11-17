@@ -4,10 +4,10 @@ A stored report is reused while it is fresh. It is stale when thresholds changed
 p7.sites.update_thresholds) or when a file for its month (and site) was loaded after it was generated."""
 
 import base64
-from html import escape as html_escape
 import json
 import logging
 from datetime import date
+from html import escape as html_escape
 from importlib.resources import files
 from pathlib import Path
 
@@ -33,7 +33,7 @@ def report_langs() -> list[str]:
 def _env() -> Environment:
     env = Environment(loader=FileSystemLoader(str(PKG.joinpath("templates"))),
                       autoescape=select_autoescape(["html", "j2"]), undefined=StrictUndefined)
-    env.globals.update(n=fmt.n)
+    env.globals.update(n=fmt.n, nr=fmt.nr)
     return env
 
 
@@ -51,6 +51,7 @@ def font_css(lang: str) -> str:
 def render_html(f: dict, lang: str) -> str:
     t = Translator(lang)
     ctx = {"f": f, "t": t, "lang": lang, "dir": direction(lang), "font_css": font_css(lang),
+           "loc": lambda obj, field: fmt.localized(obj, field, lang),
            "month_label": t.month(date.fromisoformat(f["month"] + "-01"))}
     if f["kind"] == "site_month":
         th = {k: float(v) for k, v in f["thresholds"].items() if k != "stuck_min_hours"}
@@ -154,21 +155,21 @@ def ensure_report(conn: psycopg.Connection, settings: Settings, month: date, lan
 def report_index(conn: psycopg.Connection, month: date) -> list[dict]:
     """Report status per site (+ the summary) and language for the reports page."""
     rows = conn.execute(
-        """SELECT k.code, k.name, l.lang, r.generated_at,
+        """SELECT k.code, k.name, k.name_ar, l.lang, r.generated_at,
                   CASE WHEN r.report_id IS NULL THEN 'missing'
                        WHEN r.stale OR r.generated_at < coalesce((
                             SELECT max(u.finished_at) FROM uploads u WHERE u.status = 'loaded' AND u.month = %(m)s
                               AND (k.site_id IS NULL OR u.site_id = k.site_id)), '-infinity') THEN 'stale'
                        ELSE 'fresh' END AS state
-           FROM (SELECT NULL::int AS site_id, NULL::text AS code, NULL::text AS name
-                 UNION ALL SELECT site_id, code, name FROM sites) k
+           FROM (SELECT NULL::int AS site_id, NULL::text AS code, NULL::text AS name, NULL::text AS name_ar
+                 UNION ALL SELECT site_id, code, name, name_ar FROM sites) k
            CROSS JOIN unnest(%(langs)s::text[]) AS l(lang)
            LEFT JOIN reports r ON r.month = %(m)s AND r.lang = l.lang
                 AND coalesce(r.site_id, 0) = coalesce(k.site_id, 0)
            ORDER BY k.code NULLS FIRST, l.lang""", {"m": month, "langs": report_langs()}).fetchall()
     out: dict[str | None, dict] = {}
     for r in rows:
-        item = out.setdefault(r["code"], {"code": r["code"], "name": r["name"], "langs": {}})
+        item = out.setdefault(r["code"], {"code": r["code"], "name": r["name"], "name_ar": r["name_ar"], "langs": {}})
         item["langs"][r["lang"]] = {"state": r["state"], "generated_at": r["generated_at"]}
     return list(out.values())
 

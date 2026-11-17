@@ -10,7 +10,6 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from p7.auth import create_user, set_active, set_password
-from p7.i18n import table
 from p7.web import admin, views
 from p7.web.app import create_app
 from p7.web.deps import admin_user
@@ -220,13 +219,21 @@ def test_upload_via_web_and_rejects_csv_is_safe(app, conn):
     assert r.text.count('class="state duplicate_file"') == 2
 
 
-@pytest.mark.skipif(not table("ar"), reason="ar.json not written yet (phase 8)")
 def test_language_switch_and_rtl(app):
     boss = login(app, "boss", MGMT_PW)
     r = boss.get("/lang/ar?next=/sites/KHB-01?month=2026-08")
     assert r.status_code == 303 and r.headers["location"] == "/sites/KHB-01?month=2026-08"
     html = boss.get("/sites/KHB-01?month=2026-08").text
     assert '<html lang="ar" dir="rtl">' in html
+    assert "فرع كورنيش الخبر" in html and "قراءة غير موثوقة" in html
+    # ranges and ratios are one LTR span (RTL can't swap their ends)
+    assert '<span class="num" dir="ltr">18.0 – 27.0 °C</span>' in html
+    # every page renders in Arabic for both roles
+    admin = login(app, "admin", ADMIN_PW)
+    admin.get("/lang/ar?next=/")
+    for path in ("/", "/compare", "/reports", "/uploads", "/thresholds", "/users", "/export/sites.csv"):
+        assert admin.get(path).status_code == 200, path
+    assert "رمز الموقع" in admin.get("/export/sites.csv?month=2026-08").text
     assert boss.get("/lang/xx").status_code == 404
     assert boss.get("/lang/en?next=https://evil.example").headers["location"] == "/"
 

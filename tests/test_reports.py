@@ -3,6 +3,7 @@ recomputation from the raw `readings` table (no SQL views involved). Uses the co
 (data/sample/sensors_2026-08.zip: 13 files, with KHB-01's stuck sensor and JED-01's AC failure)."""
 
 import re
+import unicodedata
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
@@ -197,7 +198,13 @@ def test_report_freshness_and_threshold_staleness(loaded):
     assert "Temperature 15.0 – 29.0 °C" in pdf_text(p2)
 
 
-@pytest.mark.skipif("ar" not in LANGS, reason="ar.json not written yet (phase 8)")
+def flat(text: str) -> str:
+    """Arabic text from pypdf comes out in presentation forms with spacing quirks: fold the forms (NFKC) and drop
+    whitespace so the comparison is about characters, not layout."""
+    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
+
+
+@pytest.mark.skipif("ar" not in LANGS, reason="ar.json not written yet")
 def test_arabic_pdfs_print_the_same_numbers(loaded):
     conn, s = loaded
     import json
@@ -206,18 +213,29 @@ def test_arabic_pdfs_print_the_same_numbers(loaded):
         path = build_site_month(conn, code, AUG, "ar", s)
         facts = json.loads(path.with_suffix(".facts.json").read_text())
         assert facts["kpis"] == recompute(conn, code, AUG)
-        text = pdf_text(path)
+        text = flat(pdf_text(path))
         k = facts["kpis"]
-        # numbers sit in their own LTR runs, so each one is extracted intact
-        for v in (k["completeness_pct"] + "%", f"{k['readings']} / {k['expected_readings']}", k["valid_readings"],
-                  k["temp_avg"] + " °C", k["temp_min"] + " °C", k["temp_max"] + " °C", k["hum_avg"] + " %"):
+        # every number sits in its own LTR run, so it is extracted intact, in order (743/744, never 744/743)
+        for v in (k["completeness_pct"] + "%", f"{k['readings']}/{k['expected_readings']}", k["valid_readings"],
+                  k["unreliable_readings"], k["temp_avg"] + "°C", k["temp_min"] + "°C", k["temp_max"] + "°C",
+                  k["hum_avg"] + "%", k["oor_hours"]):
             assert v in text, (code, v)
-        assert "اكتمال" in text or "الاكتمال" in text
+        assert f"{k['expected_readings']}/{k['readings']}" not in text
+        assert flat("اكتمال البيانات") in text and flat("القراءات غير الموثوقة") in text
+        assert flat(facts["site"]["name_ar"]) in text           # Arabic site name, not the English one
+        assert flat("بيانات تجريبية") in text                    # synthetic label
+    jed = flat(pdf_text(build_site_month(conn, "JED-01", AUG, "ar", s)))
+    assert "2026-08-1212:00" in jed and "2026-08-1419:00" in jed and "56.0" in jed
+
     summary = build_summary_month(conn, AUG, "ar", s)
     facts = json.loads(summary.with_suffix(".facts.json").read_text())
-    text = pdf_text(summary)
+    text = flat(pdf_text(summary))
     for site in facts["sites"]:
-        assert f"{site['completeness_pct']}%" in text and site["temp_avg"] in text, site["code"]
+        for v in (site["completeness_pct"] + "%", site["temp_avg"], f"{site['temp_min']}–{site['temp_max']}",
+                  site["oor_hours"]):
+            assert v in text, (site["code"], v)
+        assert flat(site["city_ar"]) in text, site["code"]
+    assert f"{facts['kpis']['readings']}/9,672" in text
 
 
 def test_report_index_lists_every_site_and_summary(loaded):

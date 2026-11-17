@@ -5,7 +5,7 @@ import json
 import psycopg
 
 from p7.db import refresh_metrics
-from p7.generate.sites import SITES
+from p7.generate.sites import CITIES_AR, NAMES_AR, SITES
 
 THRESHOLD_FIELDS = ("temp_min", "temp_max", "hum_min", "hum_max", "stuck_min_hours")
 
@@ -21,6 +21,8 @@ def seed_sites(conn: psycopg.Connection) -> int:
                 (s.code, s.name, s.city, s.kind, s.lat, s.lon,
                  th["temp_min"], th["temp_max"], th["hum_min"], th["hum_max"]))
             n += cur.rowcount
+            conn.execute("UPDATE sites SET name_ar = %s, city_ar = %s WHERE code = %s AND name_ar IS NULL",
+                         (NAMES_AR.get(s.code), CITIES_AR.get(s.city), s.code))
     return n
 
 

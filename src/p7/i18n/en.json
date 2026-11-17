@@ -108,6 +108,7 @@
   "site_table_title": "Sites",
   "download_csv": "Download CSV",
   "table_units_note": "Temperatures in °C, humidity in %, out of range in hours. Averages and min/max use valid readings only.",
+  "list_sep": ", ",
   "none": "None.",
   "start": "Start",
   "end": "End",

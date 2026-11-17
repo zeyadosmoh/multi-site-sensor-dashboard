@@ -1,5 +1,5 @@
 <tr id="th-{{ s.code }}">
-  <td data-label="{{ t('site') }}"><span dir="ltr" class="code">{{ s.code }}</span> <span class="small">{{ s.name }}</span>
+  <td data-label="{{ t('site') }}"><span dir="ltr" class="code">{{ s.code }}</span> <span class="small">{{ loc(s, "name") }}</span>
     {% if msg %}<div class="small {{ 'ok' if ok else 'bad' }}" role="status">{{ msg }}</div>{% endif %}</td>
   {% set f = "thf-" ~ s.code %}
   <td data-label="{{ t('temp_min_c') }}"><input form="{{ f }}" name="temp_min" value="{{ s.temp_min }}" inputmode="decimal" dir="ltr" size="5" aria-label="{{ s.code }} {{ t('temp_min_c') }}"></td>

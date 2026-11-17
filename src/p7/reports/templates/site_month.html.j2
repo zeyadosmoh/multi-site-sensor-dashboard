@@ -2,8 +2,8 @@
 {% block title %}{{ f.site.code }} {{ f.month }}{% endblock %}
 {% block body %}
 {% set k = f.kpis %}
-<h1>{{ t("pdf_site_title") }}: {{ f.site.name }} (<span class="num" dir="ltr">{{ f.site.code }}</span>)</h1>
-<p class="sub">{{ f.site.city }} · {{ t("kind_" ~ f.site.kind) }} · {{ month_label }} · {{ t("pdf_generated") }} {{ n(f.generated_at) }}</p>
+<h1>{{ t("pdf_site_title") }}: {{ loc(f.site, "name") }} (<span class="num" dir="ltr">{{ f.site.code }}</span>)</h1>
+<p class="sub">{{ loc(f.site, "city") }} · {{ t("kind_" ~ f.site.kind) }} · {{ month_label }} · {{ t("pdf_generated") }} {{ n(f.generated_at) }}</p>
 <div class="banner">{{ t("synthetic_banner") }}</div>
 
 <p>{{ t("status") }}: <span class="status {{ f.status }}">{{ t("status_" ~ f.status) }}</span>
@@ -13,7 +13,7 @@
 <div class="kv">
 <table>
   <tr><td>{{ t("completeness") }}</td><td>{{ n(k.completeness_pct ~ "%") }}</td></tr>
-  <tr><td>{{ t("readings_received") }}</td><td>{{ n(k.readings) }} / {{ n(k.expected_readings) }}</td></tr>
+  <tr><td>{{ t("readings_received") }}</td><td>{{ nr(k.readings, k.expected_readings, 0, "/") }}</td></tr>
   <tr><td>{{ t("unreliable_readings") }}</td><td>{{ n(k.unreliable_readings) }}</td></tr>
   <tr><td>{{ t("valid_readings") }}</td><td>{{ n(k.valid_readings) }}</td></tr>
   <tr><td>{{ t("time_out_of_range") }}</td><td>{{ n(k.oor_hours) }} {{ t("unit_h") }}</td></tr>
@@ -37,16 +37,22 @@
    {{ t("humidity") }} {{ n(f.thresholds.hum_min ~ " – " ~ f.thresholds.hum_max ~ " %") }} ·
    {{ t("stuck_after") }} {{ n(f.thresholds.stuck_min_hours) }} {{ t("unit_h") }}</p>
 
+<section class="fig">
 <h2>{{ t("chart_daily_range") }}</h2>
 <div class="chart">{{ charts.temp | safe }}</div>
 <p class="legend">{{ t("pdf_legend_temp") }}</p>
+</section>
+<section class="fig">
 <h2>{{ t("chart_daily_humidity") }}</h2>
 <div class="chart">{{ charts.hum | safe }}</div>
 <p class="legend">{{ t("pdf_legend_hum") }}</p>
+</section>
 {% if charts.profile %}
+<section class="fig">
 <h2>{{ t("chart_hour_profile") }}</h2>
 <div class="chart">{{ charts.profile | safe }}</div>
 <p class="legend">{{ t("pdf_legend_profile") }}</p>
+</section>
 {% endif %}
 
 <h2>{{ t("oor_events") }} ({{ n(f.events_total) }})</h2>
@@ -78,7 +84,7 @@
   <tr><th>{{ t("file") }}</th><th class="r">{{ t("rows_loaded") }}</th><th class="r">{{ t("rows_rejected") }}</th><th>{{ t("reasons") }}</th></tr>
   {% for u in f.uploads %}
   <tr><td><span class="num" dir="ltr">{{ u.filename }}</span></td><td class="r">{{ n(u.rows_loaded) }}</td><td class="r">{{ n(u.rejected) }}</td>
-      <td>{% for r, c in u.reasons.items() %}{{ t("reject_" ~ r) }} {{ n(c | string) }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+      <td>{% for r, c in u.reasons.items() %}{{ t("reject_" ~ r) }} {{ n(c | string) }}{% if not loop.last %}{{ t("list_sep") }}{% endif %}{% endfor %}</td></tr>
   {% endfor %}
 </table>
 <p class="muted small">{{ t("pdf_definitions") }}</p>

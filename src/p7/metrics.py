@@ -63,7 +63,7 @@ def site_table(conn: psycopg.Connection, month: date | None = None, sites: list[
     stuck, status. Ordered worst status first, then code."""
     where, params = _filters(month, sites)
     rows = conn.execute(f"""
-        SELECT s.site_id, s.code, s.name, s.city, s.kind, s.lat, s.lon,
+        SELECT s.site_id, s.code, s.name, s.city, s.name_ar, s.city_ar, s.kind, s.lat, s.lon,
                s.temp_min AS th_temp_min, s.temp_max AS th_temp_max, s.hum_min AS th_hum_min,
                s.hum_max AS th_hum_max, s.stuck_min_hours,
                sum(v.readings) AS readings, sum(v.valid_readings) AS valid_readings,
@@ -158,7 +158,8 @@ def events(conn: psycopg.Connection, month: date | None = None, sites: list[str]
     where, params = _filters(month, sites)
     lim = f"LIMIT {int(limit)}" if limit else ""
     return conn.execute(f"""
-        SELECT s.code, s.name, v.start_ts, v.end_ts, v.readings, v.minutes, v.temp_out_readings, v.hum_out_readings,
+        SELECT s.code, s.name, s.name_ar, v.start_ts, v.end_ts, v.readings, v.minutes, v.temp_out_readings,
+               v.hum_out_readings,
                v.max_temperature, v.min_temperature, v.max_humidity, v.min_humidity
         FROM v_oor_events v JOIN sites s USING (site_id) WHERE {where}
         ORDER BY v.minutes DESC, v.start_ts {lim}""", params).fetchall()

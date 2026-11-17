@@ -1,4 +1,4 @@
-"""List i18n keys used in templates/code (literal t("...") calls + known dynamic prefixes) that are missing."""
+"""Check i18n coverage: every key used in templates/code exists in en.json, and every en key exists in ar.json."""
 import json
 import re
 import sys
@@ -25,6 +25,9 @@ used = {k for k in used if not k.endswith("_")}
 used |= set(re.findall(r"\(\"[a-z_]+\", \"([a-z_]+)\", (?:None|\d)\)", (root / "web" / "views.py").read_text()))
 missing = sorted(used - en.keys())
 unused = sorted(en.keys() - used)
-print("missing:", missing)
-print("unused:", unused)
-sys.exit(1 if missing else 0)
+ar = json.loads((root / "i18n" / "ar.json").read_text()) if (root / "i18n" / "ar.json").exists() else {}
+ar_missing = sorted(en.keys() - ar.keys()) if ar else []
+print("missing in en.json:", missing)
+print("unused in en.json:", unused)
+print("en keys missing in ar.json:", ar_missing)
+sys.exit(1 if missing or ar_missing else 0)

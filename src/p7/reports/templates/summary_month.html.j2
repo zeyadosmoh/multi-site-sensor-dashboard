@@ -12,7 +12,7 @@
 <div class="kv">
 <table>
   <tr><td>{{ t("completeness") }}</td><td>{{ n(k.completeness_pct ~ "%") }}</td></tr>
-  <tr><td>{{ t("readings_received") }}</td><td>{{ n(k.readings) }} / {{ n(k.expected_readings) }}</td></tr>
+  <tr><td>{{ t("readings_received") }}</td><td>{{ nr(k.readings, k.expected_readings, 0, "/") }}</td></tr>
   <tr><td>{{ t("unreliable_readings") }}</td><td>{{ n(k.unreliable_readings) }}</td></tr>
   <tr><td>{{ t("stuck_runs") }}</td><td>{{ n(k.stuck_runs) }}</td></tr>
 </table>
@@ -31,7 +31,7 @@
       <th class="r">{{ t("avg_temp") }}</th><th class="r">{{ t("min_max_temp") }}</th><th class="r">{{ t("avg_hum") }}</th>
       <th class="r">{{ t("time_out_of_range") }}</th><th class="r">{{ t("oor_events") }}</th></tr>
   {% for s in f.sites %}
-  <tr><td><span class="dot {{ s.status }}"></span><span class="num" dir="ltr">{{ s.code }}</span> {{ s.city }}</td>
+  <tr><td><span class="dot {{ s.status }}"></span><span class="num" dir="ltr">{{ s.code }}</span> {{ loc(s, "city") }}</td>
       <td class="r">{{ n(s.completeness_pct ~ "%") }}</td><td class="r">{{ n(s.unreliable_readings) }}</td>
       <td class="r">{{ n(s.temp_avg) }}</td><td class="r">{{ n(s.temp_min ~ " – " ~ s.temp_max) }}</td>
       <td class="r">{{ n(s.hum_avg) }}</td><td class="r">{{ n(s.oor_hours) }}</td><td class="r">{{ n(s.oor_events) }}</td></tr>
@@ -39,9 +39,11 @@
 </table>
 <p class="muted small">{{ t("pdf_units_note") }}</p>
 
+<section class="fig">
 <h2>{{ t("chart_site_compare") }}</h2>
 <div class="chart">{{ charts.sites | safe }}</div>
 <p class="legend">{{ t("pdf_legend_sites") }}</p>
+</section>
 
 <h2>{{ t("pdf_longest_events") }}</h2>
 {% if f.events %}
@@ -74,7 +76,7 @@
   <tr><th>{{ t("file") }}</th><th class="r">{{ t("rows_rejected") }}</th><th>{{ t("reasons") }}</th></tr>
   {% for u in rej %}
   <tr><td><span class="num" dir="ltr">{{ u.filename }}</span></td><td class="r">{{ n(u.rejected) }}</td>
-      <td>{% for r, c in u.reasons.items() %}{{ t("reject_" ~ r) }} {{ n(c | string) }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+      <td>{% for r, c in u.reasons.items() %}{{ t("reject_" ~ r) }} {{ n(c | string) }}{% if not loop.last %}{{ t("list_sep") }}{% endif %}{% endfor %}</td></tr>
   {% endfor %}
 </table>
 {% endif %}

@@ -16,7 +16,8 @@ from p7.db import connect
 from p7.i18n import LANGS, Translator, direction, normalise
 
 templates = Jinja2Templates(directory=str(files("p7.web").joinpath("templates")))
-templates.env.globals.update(n=fmt.n, nh=fmt.nh, nts=fmt.nts, ni=fmt.ni, number=fmt.number, LANGS=LANGS)
+templates.env.globals.update(n=fmt.n, nr=fmt.nr, nh=fmt.nh, nts=fmt.nts, ni=fmt.ni, number=fmt.number, ts=fmt.ts,
+                             LANGS=LANGS)
 templates.env.policies["json.dumps_kwargs"] = {"sort_keys": True, "default": str}
 
 
@@ -79,5 +80,6 @@ def page(request: Request, name: str, ctx: dict, status_code: int = 200, user: d
     lang = lang_of(request)
     t = Translator(lang)
     base = {"request": request, "t": t, "lang": lang, "dir": direction(lang), "user": user,
+            "loc": lambda obj, field: fmt.localized(obj, field, lang),
             "csrf": csrf_token(request), "path": request.url.path, "query": request.url.query}
     return templates.TemplateResponse(request, name, {**base, **ctx}, status_code=status_code)

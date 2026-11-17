@@ -45,3 +45,20 @@ def nts(v) -> Markup:
 
 def ni(v) -> Markup:
     return n(v, 0)
+
+
+def nr(a, b, dp: int = 1, unit: str = "") -> Markup:
+    """A range or ratio ("20.7 – 38.9 °C", "743 / 744") as ONE left-to-right span, so right-to-left text can
+    never swap its two ends."""
+    sep = " / " if unit == "/" else " – "
+    unit = "" if unit == "/" else unit
+    left = a if isinstance(a, str) else number(a, dp)
+    right = b if isinstance(b, str) else number(b, dp)
+    return Markup('<span class="num" dir="ltr">{}</span>').format(escape(f"{left}{sep}{right}{unit}"))
+
+
+def localized(obj: dict, field: str, lang: str):
+    """obj[field + '_ar'] in Arabic when present, else obj[field] (site and city names)."""
+    if lang == "ar" and obj.get(f"{field}_ar"):
+        return obj[f"{field}_ar"]
+    return obj.get(field)

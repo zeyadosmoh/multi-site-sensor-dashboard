@@ -26,7 +26,7 @@
     <tbody>
     {% for r in reports %}
     <tr>
-      <td data-label="{{ t('report') }}">{% if r.code %}<span dir="ltr" class="code">{{ r.code }}</span> {{ r.name }}{% else %}<strong>{{ t("pdf_summary_title") }}</strong>{% endif %}</td>
+      <td data-label="{{ t('report') }}">{% if r.code %}<span dir="ltr" class="code">{{ r.code }}</span> {{ loc(r, "name") }}{% else %}<strong>{{ t("pdf_summary_title") }}</strong>{% endif %}</td>
       {% for l, st in r.langs.items() %}
       <td data-label="{{ t('lang_name_' ~ l) }}">
         <a class="button small" href="/reports/download?month={{ month_param }}&lang={{ l }}{% if r.code %}&site={{ r.code }}{% endif %}">PDF</a>
