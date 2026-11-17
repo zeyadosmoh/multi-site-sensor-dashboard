@@ -90,27 +90,27 @@ def test_day_first_text_dates_detected_from_the_file():
     rows = [rr(i + 2, f"{d:02d}/07/2026", "10:00") for i, d in enumerate((1, 2, 13, 31))]
     _, v = reasons(rows, date(2026, 7, 1))
     assert [r.ts.date() for r in v.readings] == [date(2026, 7, d) for d in (1, 2, 13, 31)]
-    assert any("DD/MM/YYYY" in w for w in v.warnings)
+    assert [w.code for w in v.warnings] == ["dates_dmy"]
 
 
 def test_month_first_text_dates_detected_from_the_file():
     rows = [rr(i + 2, f"07/{d:02d}/2026", "10:00") for i, d in enumerate((1, 2, 13))]
     _, v = reasons(rows, date(2026, 7, 1))
     assert [r.ts.date() for r in v.readings] == [date(2026, 7, d) for d in (1, 2, 13)]
-    assert any("MM/DD/YYYY" in w for w in v.warnings)
+    assert [w.code for w in v.warnings] == ["dates_mdy"]
 
 
 def test_ambiguous_slash_dates_assume_day_first_with_a_warning():
     _, v = reasons([rr(2, "03/05/2026", "10:00")])
     assert v.readings[0].ts == datetime(2026, 5, 3, 10)
-    assert any("assumed day-first" in w for w in v.warnings)
+    assert [w.code for w in v.warnings] == ["dates_assumed_dmy"]
 
 
 def test_excel_serial_dates():
     serial = (date(2026, 10, 5) - date(1899, 12, 30)).days
     _, v = reasons([rr(2, serial, "10:00")], date(2026, 10, 1))
     assert v.readings[0].ts == datetime(2026, 10, 5, 10)
-    assert any("serial" in w for w in v.warnings)
+    assert [w.code for w in v.warnings] == ["dates_serial"]
 
 
 @pytest.mark.parametrize("raw, expected", [

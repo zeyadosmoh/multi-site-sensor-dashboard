@@ -48,12 +48,11 @@ def detect(filename: str, cover: dict) -> Detected:
     cv = (cv_site, cv_month) if cv_site and cv_month else None
     if fn and cv:
         if fn != cv:
-            raise FileRejected(f"filename says {fn[0]} {fn[1]:%Y-%m} but the cover sheet says "
-                               f"{cv[0]} {cv[1]:%Y-%m}; fix one of them and upload again")
+            raise FileRejected("site_month_conflict", file_site=fn[0], file_month=f"{fn[1]:%Y-%m}",
+                               cover_site=cv[0], cover_month=f"{cv[1]:%Y-%m}")
         return Detected(fn[0], fn[1], "filename+cover_sheet")
     if fn:
         return Detected(fn[0], fn[1], "filename")
     if cv:
         return Detected(cv[0], cv[1], "cover_sheet")
-    raise FileRejected("cannot tell the site and month: name the file like RUH-01_2026-05.xlsx "
-                       "or add an Info sheet with 'Site code' and 'Month'")
+    raise FileRejected("site_month_unknown")

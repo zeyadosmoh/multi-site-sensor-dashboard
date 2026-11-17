@@ -27,8 +27,8 @@
       <td data-label="#">{{ ni(u.upload_id) }}</td>
       <td data-label="{{ t('when') }}">{{ nts(u.started_at.replace(tzinfo=None, microsecond=0)) }}</td>
       <td data-label="{{ t('file') }}"><span dir="ltr">{{ u.filename }}</span>{% if u.archive_name %} <span class="muted small" dir="ltr">({{ u.archive_name }})</span>{% endif %}
-        {% if u.error %}<div class="small bad">{{ u.error }}</div>{% endif %}
-        {% for w in u.warnings %}<div class="small muted">{{ w }}</div>{% endfor %}</td>
+        {% if u.error %}<div class="small bad">{{ t.msg({"code": u.error_code, "params": u.error_params} if u.error_code else u.error) }}</div>{% endif %}
+        {% for w in u.warnings %}<div class="small muted">{{ t.msg(w) }}</div>{% endfor %}</td>
       <td data-label="{{ t('site') }}" dir="ltr">{{ u.site_code or "–" }}</td>
       <td data-label="{{ t('month') }}">{{ n(u.month.strftime('%Y-%m') if u.month else '–') }}</td>
       <td data-label="{{ t('result') }}"><span class="state {{ u.status }}">{{ t("upload_" ~ u.status) }}</span></td>

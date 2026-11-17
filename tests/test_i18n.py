@@ -9,6 +9,7 @@ import pytest
 
 from p7 import fmt
 from p7.i18n import PLURAL_FORMS, Translator, direction, plural_category, table
+from p7.ingest.messages import CODES, Msg
 
 EN, AR = table("en"), table("ar")
 ARABIC = re.compile(r"[؀-ۿ]")
@@ -122,3 +123,52 @@ def test_plural_and_plain_keys_are_not_mixed_up():
         t("events_lower")
     with pytest.raises(TypeError):
         t.plural("completeness", 1)
+
+
+# --- upload log messages: code + parameters, rendered through i18n ---
+
+SRC = Path(__file__).parent.parent / "src" / "p7"
+SAMPLE_PARAMS = {"count": 600, "limit": 500, "error": "KeyError", "site": "ZZZ-01", "file_site": "RUH-01",
+                 "file_month": "2026-05", "cover_site": "JED-01", "cover_month": "2026-05", "month": "2026-06",
+                 "row": 3, "n": 2, "upload_id": 12}
+# Latin words an Arabic message may contain: format and sheet names the user sees in Excel, header names, examples
+LATIN_OK = {"zip", "xlsx", "Excel", "Office", "Open", "XML", "Info", "Site", "code", "Month", "Date", "Time",
+            "Temperature", "Humidity", "RUH", "DD", "MM", "YYYY", "a", "b"}
+
+
+def test_every_upload_message_code_exists_in_en_and_ar():
+    for code, params in CODES.items():
+        for lang, tbl in (("en", EN), ("ar", AR)):
+            entry = tbl.get(f"upload_msg_{code}")
+            assert entry, f"upload_msg_{code} missing in {lang}.json"
+            for s in forms(entry):
+                assert placeholders(s) == set(params), (lang, code, s)
+    for tbl in (EN, AR):
+        assert {k.removeprefix("upload_msg_") for k in tbl if k.startswith("upload_msg_")} == set(CODES)
+
+
+def test_every_message_code_used_by_ingestion_is_defined():
+    text = "\n".join(p.read_text() for p in (SRC / "ingest").glob("*.py"))
+    used = set(re.findall(r"""(?:FileRejected|\bmsg)\(\s*"([a-z_]+)\"""", text))
+    assert used == set(CODES)  # every code is used, and nothing is raised without one
+    # no free-text warnings or rejections are left: every FileRejected( starts with a code
+    for call in re.findall(r"FileRejected\(([^)]{0,40})", text):
+        assert re.match(r'"[a-z_]+"$|"[a-z_]+",|Exception$|pre_rejected\.code', call), call
+    assert not re.search(r"""warnings(?:\.append\(|\s*\+?=\s*\[)\s*f?["']""", text)
+
+
+@pytest.mark.parametrize("code", sorted(CODES))
+def test_upload_messages_render_in_arabic(code):
+    m = Msg(code, {p: SAMPLE_PARAMS[p] for p in CODES[code]})
+    html = str(Translator("ar").msg(m))
+    assert html == str(Translator("ar").msg(m.to_json()))  # same from the JSON stored in uploads
+    text = re.sub(r'<span class="num" dir="ltr">[^<]*</span>', "", html)
+    assert ARABIC.search(text)
+    assert set(re.findall(r"[A-Za-z]+", text)) <= LATIN_OK, code
+    for v in m.params.values():  # parameters are isolated LTR runs
+        assert f'<span class="num" dir="ltr">{v}</span>' in html
+    assert str(m) == Translator("en").msg_plain(m) and not ARABIC.search(str(m))
+
+
+def test_legacy_plain_text_messages_are_escaped():
+    assert str(Translator("ar").msg("old <b>warning</b>")) == "old &lt;b&gt;warning&lt;/b&gt;"

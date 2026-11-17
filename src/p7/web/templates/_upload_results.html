@@ -8,8 +8,8 @@
   {% for r in results %}
   <tr class="res-{{ r.status }}">
     <td data-label="{{ t('file') }}"><span dir="ltr">{{ r.filename }}</span>
-      {% if r.error %}<div class="small bad">{{ r.error }}</div>{% endif %}
-      {% for w in r.warnings %}<div class="small muted">{{ w }}</div>{% endfor %}
+      {% if r.error %}<div class="small bad">{{ t.msg(r.error_msg or r.error) }}</div>{% endif %}
+      {% for w in r.warnings %}<div class="small muted">{{ t.msg(w) }}</div>{% endfor %}
       {% for reason, c in r.reject_reasons.items() %}<div class="small">{{ t("reject_" ~ reason) }}: {{ ni(c) }}</div>{% endfor %}</td>
     <td data-label="{{ t('result') }}"><span class="state {{ r.status }}">{{ t("upload_" ~ r.status) }}</span></td>
     <td data-label="{{ t('site') }}" dir="ltr">{{ r.site_code or "–" }}</td>

@@ -23,6 +23,7 @@ import psycopg
 from p7.db import refresh_metrics
 from p7.ingest.detect import detect
 from p7.ingest.excel import FileRejected, parse_workbook
+from p7.ingest.messages import Msg, msg
 from p7.ingest.validate import reject_text, validate_rows
 
 log = logging.getLogger(__name__)
@@ -48,8 +49,9 @@ class FileResult:
     unchanged: int = 0
     rejected: int = 0
     reject_reasons: dict[str, int] = field(default_factory=dict)
-    warnings: list[str] = field(default_factory=list)
-    error: str | None = None
+    warnings: list[Msg] = field(default_factory=list)
+    error: str | None = None  # English text (CLI, logs)
+    error_msg: Msg | None = None  # code + params, rendered in the viewer's language
     archive_name: str | None = None
 
     @property
@@ -64,7 +66,7 @@ class Incoming:
     archive_name: str | None = None
 
 
-def expand(name: str, data: bytes) -> tuple[list[Incoming], list[tuple[Incoming, str]]]:
+def expand(name: str, data: bytes) -> tuple[list[Incoming], list[tuple[Incoming, Msg]]]:
     """Turn one uploaded file into workbook candidates. Zips are opened in memory (never extracted to disk).
     Returns (files, rejected-with-reason)."""
     if not name.lower().endswith(".zip"):
@@ -72,24 +74,24 @@ def expand(name: str, data: bytes) -> tuple[list[Incoming], list[tuple[Incoming,
     try:
         z = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
-        return [], [(Incoming(name, data), "not a valid .zip archive")]
+        return [], [(Incoming(name, data), msg("zip_invalid"))]
     members = [i for i in z.infolist() if not i.is_dir()]
     if len(members) > MAX_ZIP_MEMBERS:
-        return [], [(Incoming(name, data), f"zip has {len(members)} files; the limit is {MAX_ZIP_MEMBERS}")]
+        return [], [(Incoming(name, data), msg("zip_too_many_files", count=len(members), limit=MAX_ZIP_MEMBERS))]
     total = sum(i.file_size for i in members)
     if total > MAX_ZIP_TOTAL:
-        return [], [(Incoming(name, data), "zip is too large when uncompressed")]
+        return [], [(Incoming(name, data), msg("zip_too_large"))]
     ok, bad = [], []
     for info in members:
         base = PurePosixPath(info.filename.replace("\\", "/")).name
         if info.filename.startswith("__MACOSX/") or base.startswith((".", "~$")):
             continue
         if info.file_size > MAX_MEMBER or (info.compress_size and info.file_size / info.compress_size > MAX_RATIO):
-            bad.append((Incoming(base, b"", name), "file inside the zip is too large or suspiciously compressed"))
+            bad.append((Incoming(base, b"", name), msg("zip_member_too_large")))
             continue
         content = z.read(info)
         if base.lower().endswith(".zip"):
-            bad.append((Incoming(base, content, name), "zip inside a zip is not supported"))
+            bad.append((Incoming(base, content, name), msg("zip_nested")))
         else:
             ok.append(Incoming(base, content, name))
     return ok, bad
@@ -107,9 +109,11 @@ def _start_log(conn, batch_id, inc: Incoming, source: str, user_id: int | None) 
 def _finish(conn, r: FileResult) -> None:
     conn.execute(
         """UPDATE uploads SET status=%s, site_id=%s, month=%s, detected_by=%s, rows_total=%s, inserted=%s, updated=%s,
-                  unchanged=%s, rejected=%s, warnings=%s, error=%s, finished_at=now() WHERE upload_id=%s""",
+                  unchanged=%s, rejected=%s, warnings=%s, error=%s, error_code=%s, error_params=%s, finished_at=now()
+            WHERE upload_id=%s""",
         (r.status, r.site_id, r.month and date.fromisoformat(r.month + "-01"), r.detected_by, r.rows_total,
-         r.inserted, r.updated, r.unchanged, r.rejected, json.dumps(r.warnings), r.error, r.upload_id))
+         r.inserted, r.updated, r.unchanged, r.rejected, json.dumps([w.to_json() for w in r.warnings]), r.error,
+         r.error_msg and r.error_msg.code, json.dumps(r.error_msg.params if r.error_msg else {}), r.upload_id))
 
 
 def _interval(conn) -> int:
@@ -117,15 +121,15 @@ def _interval(conn) -> int:
 
 
 def ingest_one(conn: psycopg.Connection, inc: Incoming, batch_id: uuid.UUID, source: str,
-               user_id: int | None, pre_rejected: str | None = None) -> FileResult:
+               user_id: int | None, pre_rejected: Msg | None = None) -> FileResult:
     upload_id = _start_log(conn, batch_id, inc, source, user_id)
     res = FileResult(upload_id, inc.filename, "processing", archive_name=inc.archive_name)
     sha = hashlib.sha256(inc.data).hexdigest()
     try:
         if pre_rejected:
-            raise FileRejected(pre_rejected)
+            raise FileRejected(pre_rejected.code, **pre_rejected.params)
         if not inc.filename.lower().endswith(".xlsx"):
-            raise FileRejected("only .xlsx workbooks are accepted (or a .zip of them)")
+            raise FileRejected("not_xlsx")
         # identical bytes already loaded (under any name): nothing to do; checked again under a lock below
         if prev := _loaded_copy(conn, sha):
             return _mark_duplicate(conn, res, prev)
@@ -134,20 +138,20 @@ def ingest_one(conn: psycopg.Connection, inc: Incoming, batch_id: uuid.UUID, sou
         res.site_code, res.month, res.detected_by = det.site_code, f"{det.month:%Y-%m}", det.detected_by
         site = conn.execute("SELECT site_id FROM sites WHERE code = %s", (det.site_code,)).fetchone()
         if site is None:
-            raise FileRejected(f"unknown site code {det.site_code}")
+            raise FileRejected("unknown_site", site=det.site_code)
         res.site_id = site["site_id"]
         res.warnings = list(parsed.warnings)
         if det.detected_by == "cover_sheet":
-            res.warnings.append("site and month taken from the Info cover sheet")
+            res.warnings.append(msg("cover_sheet"))
         if parsed.empty_rows:
-            res.warnings.append(f"{parsed.empty_rows} empty row(s) ignored")
+            res.warnings.append(msg("empty_rows", n=parsed.empty_rows))
         v = validate_rows(parsed.rows, det.month, _interval(conn))
         res.warnings += v.warnings
         res.rows_total = len(parsed.rows)
         if res.rows_total and len(v.rejects) / res.rows_total > 0.5:
             counts = _count(v.rejects)
             if counts.get("outside_file_month", 0) / res.rows_total > 0.5:
-                raise FileRejected(f"most rows are not in {det.month:%Y-%m}; check the site/month in the filename")
+                raise FileRejected("wrong_month", month=f"{det.month:%Y-%m}")
 
         with conn.transaction():
             conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (sha,))
@@ -168,10 +172,11 @@ def ingest_one(conn: psycopg.Connection, inc: Incoming, batch_id: uuid.UUID, sou
             _finish(conn, res)
         return res
     except FileRejected as e:
-        res.status, res.error = "rejected_file", str(e)
+        res.status, res.error, res.error_msg = "rejected_file", str(e), e.msg
     except Exception as e:  # noqa: BLE001 - logged and recorded, the batch continues with the next file
         log.exception("ingest failed for %s", inc.filename)
-        res.status, res.error = "failed", f"{type(e).__name__}: {e}"[:500]
+        res.error_msg = msg("internal_error", error=f"{type(e).__name__}: {e}"[:400])
+        res.status, res.error = "failed", str(res.error_msg)
         res.inserted = res.updated = res.unchanged = res.rejected = 0
     with conn.transaction():
         _finish(conn, res)
@@ -187,7 +192,7 @@ def _loaded_copy(conn, sha: str) -> dict | None:
 def _mark_duplicate(conn, res: FileResult, prev: dict) -> FileResult:
     res.status = "duplicate_file"
     res.site_id, res.site_code, res.month = prev["site_id"], prev["code"], prev["month"]
-    res.warnings = [f"identical file already loaded (upload #{prev['upload_id']}); nothing changed"]
+    res.warnings = [msg("duplicate_file", upload_id=prev["upload_id"])]
     res.rows_total = res.inserted = res.updated = res.unchanged = res.rejected = 0
     with conn.transaction():
         _finish(conn, res)

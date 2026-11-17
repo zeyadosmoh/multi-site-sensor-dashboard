@@ -19,6 +19,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from p7.ingest.excel import RawRow
+from p7.ingest.messages import Msg, msg
 
 REASONS = ("bad_date", "bad_time", "missing_value", "non_numeric", "temp_impossible", "humidity_impossible",
            "outside_file_month", "duplicate_exact", "duplicate_conflict")
@@ -51,7 +52,7 @@ class Reject:
 class Validated:
     readings: list[Reading] = field(default_factory=list)
     rejects: list[Reject] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
+    warnings: list[Msg] = field(default_factory=list)
 
 
 def _text(v: object) -> str | None:
@@ -62,7 +63,7 @@ def _text(v: object) -> str | None:
     return str(v)
 
 
-def detect_slash_order(rows: list[RawRow]) -> tuple[str, str | None]:
+def detect_slash_order(rows: list[RawRow]) -> tuple[str, Msg | None]:
     """For dates written as a/b/YYYY: decide day-first or month-first from the whole file."""
     first_gt_12 = second_gt_12 = False
     seen = False
@@ -74,12 +75,12 @@ def detect_slash_order(rows: list[RawRow]) -> tuple[str, str | None]:
     if not seen:
         return "dmy", None
     if first_gt_12 and not second_gt_12:
-        return "dmy", "dates are written as DD/MM/YYYY text; read day-first"
+        return "dmy", msg("dates_dmy")
     if second_gt_12 and not first_gt_12:
-        return "mdy", "dates are written as MM/DD/YYYY text; read month-first"
+        return "mdy", msg("dates_mdy")
     if not first_gt_12 and not second_gt_12:
-        return "dmy", "dates are written as a/b/YYYY and every day is <= 12; assumed day-first (DD/MM/YYYY)"
-    return "dmy", "dates mix day-first and month-first; rows that don't fit day-first are rejected"
+        return "dmy", msg("dates_assumed_dmy")
+    return "dmy", msg("dates_mixed")
 
 
 def parse_date(v: object, slash_order: str) -> date | None:
@@ -153,7 +154,7 @@ def validate_rows(rows: list[RawRow], month: date, interval_minutes: int = 60) -
     if note:
         out.warnings.append(note)
     if any(isinstance(r.date, int | float) and not isinstance(r.date, bool) for r in rows):
-        out.warnings.append("dates are stored as plain Excel serial numbers; converted")
+        out.warnings.append(msg("dates_serial"))
     next_month = date(month.year + (month.month == 12), month.month % 12 + 1, 1)
 
     candidates: list[Reading] = []
@@ -178,8 +179,9 @@ def validate_rows(rows: list[RawRow], month: date, interval_minutes: int = 60) -
             reason = "missing_value" if "missing_value" in (tp, hp) else "non_numeric"
             what = [n for n, p in (("temperature", tp), ("humidity", hp)) if p == reason]
             raw = {"temperature": r.temperature, "humidity": r.humidity}
-            msg = " and ".join(f"{w} {raw[w]!r}" for w in what)
-            out.rejects.append(Reject(r, reason, f"{msg}: {'blank' if reason == 'missing_value' else 'not a number'}"))
+            detail = " and ".join(f"{w} {raw[w]!r}" for w in what)
+            problem = "blank" if reason == "missing_value" else "not a number"
+            out.rejects.append(Reject(r, reason, f"{detail}: {problem}"))
             continue
         if not TEMP_RANGE[0] <= temp <= TEMP_RANGE[1]:
             out.rejects.append(Reject(r, "temp_impossible", f"temperature {temp} C is outside -40..70 C"))

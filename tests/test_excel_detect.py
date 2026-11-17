@@ -8,6 +8,7 @@ import pytest
 
 from p7.ingest.detect import detect, from_filename
 from p7.ingest.excel import FileRejected, parse_workbook
+from p7.ingest.messages import msg
 from tests.helpers import make_xlsx
 
 
@@ -17,7 +18,8 @@ def test_header_found_below_a_title_row():
     p = parse_workbook(data)
     assert p.header_row == 3
     assert p.rows[0].row_number == 4
-    assert any("header found on row 3" in w for w in p.warnings)
+    assert p.warnings == [msg("header_row", row=3, n=2)]
+    assert str(p.warnings[0]) == "header found on row 3; 2 rows above it ignored"
 
 
 def test_header_aliases_and_units_and_column_order():

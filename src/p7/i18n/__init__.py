@@ -12,7 +12,9 @@ from decimal import Decimal, InvalidOperation
 from functools import cache
 from importlib.resources import files
 
-from markupsafe import Markup
+from markupsafe import Markup, escape
+
+from p7 import fmt
 
 LANGS = ("en", "ar")
 DEFAULT_LANG = "en"
@@ -112,6 +114,32 @@ class Translator:
     def plural_plain(self, key: str, count, **kw) -> str:
         s = self._form(key, count)
         return s.format(**kw) if kw else s
+
+    def _msg_parts(self, m) -> tuple[str, dict]:
+        code, params = (m.code, m.params) if hasattr(m, "code") else (m["code"], m.get("params") or {})
+        return f"upload_msg_{code}", params
+
+    def msg(self, m) -> Markup:
+        """An upload log message (p7.ingest.messages.Msg, or its stored JSON {"code", "params"}) in this language.
+        Parameters are site codes, months, row numbers, file names: each is its own LTR span. A plain string is
+        an upload logged before message codes existed and is shown as it is."""
+        if m is None:
+            return Markup("")
+        if isinstance(m, str):
+            return escape(m)
+        key, params = self._msg_parts(m)
+        kw = {k: fmt.n(str(v)) for k, v in params.items()}
+        if isinstance(self._entry(key), dict):
+            return self.plural(key, params["n"], **kw)
+        return self(key, **kw)
+
+    def msg_plain(self, m) -> str:
+        if isinstance(m, str):
+            return m
+        key, params = self._msg_parts(m)
+        if isinstance(self._entry(key), dict):
+            return self.plural_plain(key, params["n"], **params)
+        return self.plain(key, **params)
 
     def month(self, d) -> str:
         return f"{self.plain(f'month_{d.month}')} {d.year}" if d else self.plain("all_months")

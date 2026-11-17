@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 
 from openpyxl import load_workbook
 
+from p7.ingest.messages import Msg, msg
+
 HEADER_ALIASES = {
     "date": "date", "day": "date",
     "time": "time", "hour": "time",
@@ -19,7 +21,12 @@ MAX_XLSX_UNCOMPRESSED = 200 * 1024 * 1024
 
 
 class FileRejected(Exception):
-    """The whole file is unusable; the message is shown to the user."""
+    """The whole file is unusable. Carries a message code + parameters (p7.ingest.messages), shown to the user in
+    their language; str() is the English text."""
+
+    def __init__(self, code: str, **params):
+        self.msg = Msg(code, params)
+        super().__init__(str(self.msg))
 
 
 @dataclass
@@ -37,7 +44,7 @@ class ParsedWorkbook:
     header_row: int
     rows: list[RawRow]
     cover: dict[str, object] = field(default_factory=dict)
-    warnings: list[str] = field(default_factory=list)
+    warnings: list[Msg] = field(default_factory=list)
     empty_rows: int = 0
 
 
@@ -61,14 +68,14 @@ def _check_container(data: bytes) -> None:
     try:
         z = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile as e:
-        raise FileRejected("not a valid .xlsx file (it is not an Office Open XML workbook)") from e
+        raise FileRejected("xlsx_invalid") from e
     names = set(z.namelist())
     if "xl/workbook.xml" not in names:
-        raise FileRejected("not a valid .xlsx file (no workbook inside)")
+        raise FileRejected("xlsx_no_workbook")
     if "xl/vbaProject.bin" in names:
-        raise FileRejected("macro-enabled workbook; save it as a plain .xlsx")
+        raise FileRejected("xlsx_macro")
     if sum(i.file_size for i in z.infolist()) > MAX_XLSX_UNCOMPRESSED:
-        raise FileRejected("workbook is too large when uncompressed")
+        raise FileRejected("xlsx_too_large")
 
 
 def read_cover(ws) -> dict[str, object]:
@@ -89,7 +96,7 @@ def parse_workbook(data: bytes) -> ParsedWorkbook:
     try:
         wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     except Exception as e:  # openpyxl raises many types on corrupt files
-        raise FileRejected(f"could not open the workbook ({type(e).__name__})") from e
+        raise FileRejected("xlsx_unreadable", error=type(e).__name__) from e
     try:
         cover: dict[str, object] = {}
         data_sheet = None
@@ -101,11 +108,11 @@ def parse_workbook(data: bytes) -> ParsedWorkbook:
             elif not hit and not cover:
                 cover = read_cover(ws)
         if data_sheet is None:
-            raise FileRejected("no sheet has a Date / Time / Temperature / Humidity header in its first 10 rows")
+            raise FileRejected("no_header")
         ws, header_row, cols = data_sheet
         parsed = ParsedWorkbook(sheet=ws.title, header_row=header_row, rows=[], cover=cover)
         if header_row > 1:
-            parsed.warnings.append(f"header found on row {header_row}; {header_row - 1} row(s) above it ignored")
+            parsed.warnings.append(msg("header_row", row=header_row, n=header_row - 1))
         for n, row in enumerate(ws.iter_rows(min_row=header_row + 1, values_only=True), start=header_row + 1):
             vals = [row[cols[k]] if cols[k] < len(row) else None for k in REQUIRED]
             if all(v is None or (isinstance(v, str) and not v.strip()) for v in vals):

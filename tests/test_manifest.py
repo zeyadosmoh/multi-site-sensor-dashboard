@@ -55,9 +55,11 @@ def test_ingestion_matches_manifest_exactly(conn, dataset):
     # file-level variations were handled (and said so)
     by_name = {f["filename"]: f for f in r["files"]}
     assert by_name["sensor_export_final (2).xlsx"]["detected_by"] == "cover_sheet"
-    assert any("DD/MM/YYYY" in w for w in by_name["JED-02_2026-07.xlsx"]["warnings"])
-    assert any("serial" in w for w in by_name["MAK-01_2026-10.xlsx"]["warnings"])
-    assert any("header found on row 3" in w for w in by_name["RUH-02_2026-06.xlsx"]["warnings"])
+    # warnings are stored as code + parameters (rendered in the viewer's language)
+    assert {"code": "dates_dmy", "params": {}} in by_name["JED-02_2026-07.xlsx"]["warnings"]
+    assert {"code": "dates_serial", "params": {}} in by_name["MAK-01_2026-10.xlsx"]["warnings"]
+    assert {"code": "header_row", "params": {"row": 3, "n": 2}} in by_name["RUH-02_2026-06.xlsx"]["warnings"]
+    assert {"code": "cover_sheet", "params": {}} in by_name["sensor_export_final (2).xlsx"]["warnings"]
 
     # idempotent: the whole folder again changes nothing
     q = "SELECT count(*) AS n, sum(temperature) AS t, max(updated_at) AS u FROM readings"

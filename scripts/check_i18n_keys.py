@@ -5,6 +5,9 @@ import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent / "src" / "p7"
+sys.path.insert(0, str(root.parent))
+from p7.ingest.messages import CODES  # noqa: E402
+
 en = json.loads((root / "i18n" / "en.json").read_text())
 used = set()
 for p in list(root.rglob("*.html")) + list(root.rglob("*.j2")) + list(root.rglob("*.py")):
@@ -17,7 +20,7 @@ dynamic = {"status_": ["green", "amber", "red"],
            "upload_": ["loaded", "duplicate_file", "rejected_file", "failed", "processing"],
            "report_": ["fresh", "stale", "missing"], "role_": ["admin", "management"],
            "lang_name_": ["en", "ar"], "switch_to_": ["en", "ar"], "error_": ["400", "403", "404", "413", "other"],
-           "month_": [str(i) for i in range(1, 13)]}
+           "month_": [str(i) for i in range(1, 13)], "upload_msg_": list(CODES)}
 for prefix, vals in dynamic.items():
     used |= {prefix + v for v in vals}
 used = {k for k in used if not k.endswith("_")}

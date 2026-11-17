@@ -219,6 +219,26 @@ def test_upload_via_web_and_rejects_csv_is_safe(app, conn):
     assert r.text.count('class="state duplicate_file"') == 2
 
 
+def test_upload_messages_follow_the_page_language(app, conn):
+    admin = login(app, "admin", ADMIN_PW)
+    good = make_xlsx(hour_rows(datetime(2026, 8, 1), 3), pre_rows=[["Sensor export"], []])
+    files = [("files", ("ZZZ-01_2026-08.xlsx", make_xlsx(hour_rows(datetime(2026, 8, 1), 2)), "application/x")),
+             ("files", ("RUH-01_2026-08.xlsx", good, "application/x"))]
+    admin.post("/uploads", files=files, headers={"X-CSRF-Token": token(admin), "HX-Request": "true"})
+    admin.get("/lang/ar?next=/uploads")
+    files[1] = ("files", ("copy.xlsx", good, "application/x"))  # same bytes again: duplicate_file warning
+    results = admin.post("/uploads", files=files, headers={"X-CSRF-Token": token(admin), "HX-Request": "true"}).text
+    log = admin.get("/uploads").text
+    for html in (results, log):
+        assert 'رمز موقع غير معروف: <span class="num" dir="ltr">ZZZ-01</span>' in html
+        assert "unknown site code" not in html and "identical file" not in html
+        assert "الملف نفسه محمَّل مسبقًا" in html
+    assert "العناوين في الصف" in log and "header found" not in log  # warning stored by the first upload
+    # the English text is kept in the error column (CLI, psql)
+    assert conn.execute("SELECT error FROM uploads WHERE error_code = 'unknown_site' LIMIT 1").fetchone()["error"] \
+        == "unknown site code ZZZ-01"
+
+
 def test_language_switch_and_rtl(app):
     boss = login(app, "boss", MGMT_PW)
     r = boss.get("/lang/ar?next=/sites/KHB-01?month=2026-08")
