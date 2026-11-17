@@ -5,13 +5,24 @@ All metrics are SQL views in [`src/p7/db/sql/views.sql`](../src/p7/db/sql/views.
 | Metric | Definition |
 |---|---|
 | Expected readings | Minutes in the period ÷ reading interval. With the 60-minute interval that's 24 a day and 744 in a 31-day month. The interval is `app_config.reading_interval_minutes`. |
-| Completeness % | Readings stored ÷ expected readings × 100. A site with no file for a reported month shows 0 %. |
+| Completeness % | Readings received ÷ expected readings × 100. A site with no file for a reported month shows 0 %. Unreliable readings count as received (they arrived), so completeness is always shown next to the number of unreliable readings, e.g. "completeness 99.6 %, 30 unreliable". |
 | Reporting months | Months with at least one successfully loaded file, from any site. |
-| Average / min / max | Over stored readings. Averages for longer periods are weighted by readings, never an average of daily averages. |
-| Out of range | Temperature outside [min, max] **or** humidity outside [min, max], using the site's current thresholds. A value equal to a limit counts as in range. |
+| Valid readings | Readings received minus unreliable readings. |
+| Average / min / max | Over **valid** readings only. Averages for longer periods are weighted by valid readings, never an average of daily averages. |
+| Out of range | A **valid** reading with temperature outside [min, max] **or** humidity outside [min, max], using the site's current thresholds. A value equal to a limit counts as in range. |
 | Minutes out of range | Out-of-range readings × reading interval. |
-| Out-of-range event | A run of consecutive out-of-range readings. A missing reading ends the event. An event counts on the day and month it starts. |
-| Stuck sensor | Consecutive readings, with no gap, where temperature **and** humidity are both identical for at least `stuck_min_hours` (default 6, set per site). Stuck readings stay in the averages because they are stored data, but they are flagged and counted. |
+| Out-of-range event | A run of consecutive out-of-range readings. A missing reading or an unreliable reading ends the event. An event counts on the day and month it starts. |
+| Stuck sensor / unreliable reading | A stuck run is consecutive readings, with no gap, where temperature **and** humidity are both identical for at least `stuck_min_hours` (default 6, set per site). Every reading in a stuck run is an **unreliable reading**. |
+
+## Why unreliable readings are excluded
+
+A sensor that repeats the same value for hours is not measuring, so the true temperature during that time is unknown. It could be the middle of a cooling failure. A frozen "23.4 °C" must not make a site look safe.
+
+Unreliable readings are therefore:
+- **excluded** from averages, min/max, the hour-of-day profile, out-of-range counts and events;
+- **kept** in the database, marked on the site page charts, and listed with their time range;
+- **counted** next to completeness on the dashboard and in every PDF;
+- **red status:** any stuck run makes the site red for that period.
 
 ## Site status
 

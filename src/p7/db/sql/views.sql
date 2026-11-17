@@ -1,7 +1,6 @@
 -- Metric views. Re-created on every `p7 migrate` (they hold no data).
 -- Definitions (also in docs/metrics.md):
 --   expected readings   = minutes in the period / reading interval (60 -> 24 a day, 744 in a 31-day month)
---   completeness %      = readings stored / expected readings x 100
 --   out of range        = temperature outside [temp_min, temp_max] OR humidity outside [hum_min, hum_max]
 --                         (bounds are inclusive: a reading equal to the limit is in range); thresholds are the
 --                         site's CURRENT ones
@@ -9,8 +8,11 @@
 --   out-of-range event  = a run of out-of-range readings with no gap (consecutive intervals); a missing reading
 --                         ends the event. An event belongs to the month (and day) it starts in.
 --   stuck run           = consecutive readings (no gap) with identical temperature AND humidity lasting
---                         >= stuck_min_hours; every reading in it is flagged stuck. Stuck readings stay in the
---                         averages (they are stored data) but are flagged on the dashboard and in reports.
+--                         >= stuck_min_hours. Every reading in it is an UNRELIABLE reading: stored and flagged,
+--                         counted next to completeness, but excluded from averages, min/max and out-of-range
+--                         counts (the true value is unknown). An unreliable reading also ends an out-of-range event.
+--   completeness %      = readings received / expected (unreliable ones included: they arrived, but are shown
+--                         separately as "unreliable")
 --   reporting months    = months that have at least one successfully loaded upload (any site)
 
 DROP VIEW IF EXISTS v_site_month, v_site_day, v_oor_events, v_stuck_runs, v_readings_flagged, v_calendar_day,
@@ -30,35 +32,45 @@ WITH cfg AS (
     SELECT make_interval(mins => reading_interval_minutes) AS step, reading_interval_minutes AS step_min
     FROM app_config
 ), base AS (
-    SELECT r.site_id, r.reading_ts, r.temperature, r.humidity, s.stuck_min_hours, cfg.step, cfg.step_min,
-           (r.temperature < s.temp_min OR r.temperature > s.temp_max) AS temp_out,
-           (r.humidity < s.hum_min OR r.humidity > s.hum_max) AS hum_out
+    SELECT r.site_id, r.reading_ts, r.temperature, r.humidity, s.stuck_min_hours, cfg.step_min,
+           (r.temperature < s.temp_min OR r.temperature > s.temp_max) AS raw_temp_out,
+           (r.humidity < s.hum_min OR r.humidity > s.hum_max) AS raw_hum_out,
+           coalesce(lag(r.reading_ts) OVER w = r.reading_ts - cfg.step, false) AS follows_prev,
+           lag(r.temperature) OVER w AS prev_t,
+           lag(r.humidity) OVER w AS prev_h
     FROM readings r JOIN sites s USING (site_id) CROSS JOIN cfg
-), lagged AS (
+    WINDOW w AS (PARTITION BY r.site_id ORDER BY r.reading_ts)
+), same_runs AS (
     SELECT b.*,
-           (b.temp_out OR b.hum_out) AS out_of_range,
-           lag(b.reading_ts)  OVER w = b.reading_ts - b.step AS follows_prev,
-           lag(b.temperature) OVER w AS prev_t,
-           lag(b.humidity)    OVER w AS prev_h,
-           lag(b.temp_out OR b.hum_out) OVER w AS prev_oor
+           sum(CASE WHEN b.follows_prev AND b.temperature = b.prev_t AND b.humidity = b.prev_h THEN 0 ELSE 1 END)
+               OVER (PARTITION BY b.site_id ORDER BY b.reading_ts) AS same_grp
     FROM base b
-    WINDOW w AS (PARTITION BY b.site_id ORDER BY b.reading_ts)
-), islands AS (
-    SELECT l.*,
-           sum(CASE WHEN coalesce(l.follows_prev, false) AND l.temperature = l.prev_t AND l.humidity = l.prev_h
-                    THEN 0 ELSE 1 END) OVER w AS same_grp,
-           sum(CASE WHEN l.out_of_range AND NOT (coalesce(l.follows_prev, false) AND coalesce(l.prev_oor, false))
-                    THEN 1 ELSE 0 END) OVER w AS oor_grp
-    FROM lagged l
-    WINDOW w AS (PARTITION BY l.site_id ORDER BY l.reading_ts)
+), stuck AS (
+    -- a stuck (unreliable) reading is not a measurement: it is never in range or out of range
+    SELECT sr.*,
+           count(*) OVER (PARTITION BY sr.site_id, sr.same_grp) * sr.step_min >= sr.stuck_min_hours * 60 AS stuck
+    FROM same_runs sr
+), flagged AS (
+    SELECT st.*,
+           st.raw_temp_out AND NOT st.stuck AS temp_out,
+           st.raw_hum_out AND NOT st.stuck AS hum_out,
+           (st.raw_temp_out OR st.raw_hum_out) AND NOT st.stuck AS out_of_range
+    FROM stuck st
+), prev_oor AS (
+    SELECT f.*, coalesce(lag(f.out_of_range) OVER (PARTITION BY f.site_id ORDER BY f.reading_ts), false) AS prev_out
+    FROM flagged f
+), oor AS (
+    SELECT po.*,
+           sum(CASE WHEN po.out_of_range AND NOT (po.follows_prev AND po.prev_out) THEN 1 ELSE 0 END)
+               OVER (PARTITION BY po.site_id ORDER BY po.reading_ts) AS oor_grp_all
+    FROM prev_oor po
 )
-SELECT i.site_id, i.reading_ts, i.reading_ts::date AS day, date_trunc('month', i.reading_ts)::date AS month,
-       extract(hour FROM i.reading_ts)::int AS hour,
-       i.temperature, i.humidity, i.temp_out, i.hum_out, i.out_of_range, i.step_min,
-       CASE WHEN i.out_of_range THEN i.oor_grp END AS oor_grp,
-       i.same_grp,
-       count(*) OVER (PARTITION BY i.site_id, i.same_grp) * i.step_min >= i.stuck_min_hours * 60 AS stuck
-FROM islands i;
+SELECT o.site_id, o.reading_ts, o.reading_ts::date AS day, date_trunc('month', o.reading_ts)::date AS month,
+       extract(hour FROM o.reading_ts)::int AS hour,
+       o.temperature, o.humidity, o.temp_out, o.hum_out, o.out_of_range, o.step_min,
+       CASE WHEN o.out_of_range THEN o.oor_grp_all END AS oor_grp,
+       o.same_grp, o.stuck
+FROM oor o;
 
 CREATE VIEW v_oor_events AS
 SELECT site_id, oor_grp AS event_no,
@@ -85,18 +97,24 @@ CREATE VIEW v_site_day AS
 WITH cfg AS (SELECT reading_interval_minutes AS step_min FROM app_config),
 agg AS (
     SELECT site_id, day, count(*) AS readings,
-           avg(temperature) AS temp_avg, min(temperature) AS temp_min, max(temperature) AS temp_max,
-           avg(humidity) AS hum_avg, min(humidity) AS hum_min, max(humidity) AS hum_max,
+           count(*) FILTER (WHERE NOT stuck) AS valid_readings,
+           avg(temperature) FILTER (WHERE NOT stuck) AS temp_avg,
+           min(temperature) FILTER (WHERE NOT stuck) AS temp_min,
+           max(temperature) FILTER (WHERE NOT stuck) AS temp_max,
+           avg(humidity) FILTER (WHERE NOT stuck) AS hum_avg,
+           min(humidity) FILTER (WHERE NOT stuck) AS hum_min,
+           max(humidity) FILTER (WHERE NOT stuck) AS hum_max,
            count(*) FILTER (WHERE out_of_range) AS oor_readings,
            count(*) FILTER (WHERE temp_out) AS temp_out_readings,
            count(*) FILTER (WHERE hum_out) AS hum_out_readings,
-           count(*) FILTER (WHERE stuck) AS stuck_readings
+           count(*) FILTER (WHERE stuck) AS unreliable_readings
     FROM v_readings_flagged GROUP BY site_id, day
 ), ev AS (
     SELECT site_id, day, count(*) AS oor_events FROM v_oor_events GROUP BY site_id, day
 )
 SELECT c.site_id, c.day, c.month,
        coalesce(a.readings, 0) AS readings,
+       coalesce(a.valid_readings, 0) AS valid_readings,
        1440 / cfg.step_min AS expected_readings,
        round(100.0 * coalesce(a.readings, 0) / (1440 / cfg.step_min), 2) AS completeness_pct,
        a.temp_avg, a.temp_min, a.temp_max, a.hum_avg, a.hum_min, a.hum_max,
@@ -105,7 +123,7 @@ SELECT c.site_id, c.day, c.month,
        coalesce(a.temp_out_readings, 0) AS temp_out_readings,
        coalesce(a.hum_out_readings, 0) AS hum_out_readings,
        coalesce(ev.oor_events, 0) AS oor_events,
-       coalesce(a.stuck_readings, 0) AS stuck_readings
+       coalesce(a.unreliable_readings, 0) AS unreliable_readings
 FROM v_calendar_day c
 CROSS JOIN cfg
 LEFT JOIN agg a ON a.site_id = c.site_id AND a.day = c.day
@@ -115,12 +133,17 @@ CREATE VIEW v_site_month AS
 WITH cfg AS (SELECT reading_interval_minutes AS step_min FROM app_config),
 agg AS (
     SELECT site_id, month, count(*) AS readings,
-           avg(temperature) AS temp_avg, min(temperature) AS temp_min, max(temperature) AS temp_max,
-           avg(humidity) AS hum_avg, min(humidity) AS hum_min, max(humidity) AS hum_max,
+           count(*) FILTER (WHERE NOT stuck) AS valid_readings,
+           avg(temperature) FILTER (WHERE NOT stuck) AS temp_avg,
+           min(temperature) FILTER (WHERE NOT stuck) AS temp_min,
+           max(temperature) FILTER (WHERE NOT stuck) AS temp_max,
+           avg(humidity) FILTER (WHERE NOT stuck) AS hum_avg,
+           min(humidity) FILTER (WHERE NOT stuck) AS hum_min,
+           max(humidity) FILTER (WHERE NOT stuck) AS hum_max,
            count(*) FILTER (WHERE out_of_range) AS oor_readings,
            count(*) FILTER (WHERE temp_out) AS temp_out_readings,
            count(*) FILTER (WHERE hum_out) AS hum_out_readings,
-           count(*) FILTER (WHERE stuck) AS stuck_readings
+           count(*) FILTER (WHERE stuck) AS unreliable_readings
     FROM v_readings_flagged GROUP BY site_id, month
 ), ev AS (
     SELECT site_id, month, count(*) AS oor_events, max(minutes) AS longest_event_minutes
@@ -134,6 +157,7 @@ agg AS (
 )
 SELECT m.site_id, m.month,
        coalesce(a.readings, 0) AS readings,
+       coalesce(a.valid_readings, 0) AS valid_readings,
        m.expected AS expected_readings,
        round(100.0 * coalesce(a.readings, 0) / m.expected, 2) AS completeness_pct,
        a.temp_avg, a.temp_min, a.temp_max, a.hum_avg, a.hum_min, a.hum_max,
@@ -143,7 +167,7 @@ SELECT m.site_id, m.month,
        coalesce(a.hum_out_readings, 0) AS hum_out_readings,
        coalesce(ev.oor_events, 0) AS oor_events,
        coalesce(ev.longest_event_minutes, 0) AS longest_event_minutes,
-       coalesce(a.stuck_readings, 0) AS stuck_readings,
+       coalesce(a.unreliable_readings, 0) AS unreliable_readings,
        coalesce(st.stuck_runs, 0) AS stuck_runs
 FROM m
 CROSS JOIN cfg

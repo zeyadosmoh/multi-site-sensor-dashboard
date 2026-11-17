@@ -27,10 +27,10 @@ D = datetime(2026, 5, 1)
 FIXTURE = [(D + timedelta(hours=h), t, rh) for h, t, rh in [
     (0, 20.0, 40.0), (1, 22.0, 40.0), (2, 31.0, 40.0), (3, 32.5, 70.0), (4, 25.0, 66.0),
     (6, 30.0, 65.0), (7, 30.1, 50.0)] + [(h, 24.0, 50.0) for h in range(8, 14)] + [(14, 24.0, 50.1)]]
-# 14 readings.
-# temperature sum = 20+22+31+32.5+25+30+30.1 + 7x24 = 190.6 + 168 = 358.6 -> avg 358.6/14 = 25.614285...
-# humidity sum    = 40x3 + 70 + 66 + 65 + 50x7 + 0.1 = 120+70+66+65+350+0.1 = 671.1 -> wait: 50 x 6 + 50.1 + 50(07)
-#   hours 07..13 = 7 readings at 50.0 (350.0), hour 14 = 50.1 -> 120+70+66+65+350+50.1 = 721.1 -> avg 51.507142...
+# 14 readings received; hours 08-13 are UNRELIABLE (stuck), so 8 valid readings: 00-04, 06, 07, 14.
+# valid temperature: 20 + 22 + 31 + 32.5 + 25 + 30 + 30.1 + 24.0 = 214.6 -> avg 214.6 / 8 = 26.825
+# valid humidity:    40 + 40 + 40 + 70 + 66 + 65 + 50.0 + 50.1 = 421.1 -> avg 421.1 / 8 = 52.6375
+# (if the 6 stuck readings were wrongly included: 358.6 / 14 = 25.61 and 721.1 / 14 = 51.51)
 
 
 @pytest.fixture
@@ -47,14 +47,14 @@ def one_day(conn):
 def test_daily_numbers(day):
     r = one_day(day)
     assert r["readings"] == 14 and r["expected_readings"] == 24
-    assert r["completeness_pct"] == Decimal("58.33")           # 14 / 24
-    assert round(r["temp_avg"], 6) == Decimal("25.614286")     # 358.6 / 14
+    assert r["completeness_pct"] == Decimal("58.33")           # 14 received / 24 (unreliable ones arrived)
+    assert r["unreliable_readings"] == 6 and r["valid_readings"] == 8
+    assert r["temp_avg"] == Decimal("26.825")                  # 214.6 / 8, stuck excluded
     assert (r["temp_min"], r["temp_max"]) == (Decimal("20.0"), Decimal("32.5"))
-    assert round(r["hum_avg"], 6) == Decimal("51.507143")      # 721.1 / 14
+    assert r["hum_avg"] == Decimal("52.6375")                  # 421.1 / 8
     assert (r["hum_min"], r["hum_max"]) == (Decimal("40.0"), Decimal("70.0"))
     assert r["oor_readings"] == 4 and r["oor_minutes"] == 240  # hours 02, 03, 04, 07
     assert r["oor_events"] == 2
-    assert r["stuck_readings"] == 6
 
 
 def test_events_and_stuck_runs(day):
@@ -75,6 +75,33 @@ def test_month_row_and_status(day):
     assert r["stuck_runs"] == 1
     assert r["status"] == "red"
     assert set(r["status_reasons"]) == {"low_completeness", "stuck_sensor"}
+
+
+def test_unreliable_readings_never_count_as_out_of_range_and_split_events(conn):
+    # 2 out of range (35.0 / varying), then 6 identical out-of-range readings (stuck), then 2 out of range again.
+    # The stuck block is unknown data: not out of range, excluded from max, and it separates two events.
+    hot = [(D + timedelta(hours=h), 35.0 + h / 10, 45.0 + h) for h in (0, 1)]
+    stuck = [(D + timedelta(hours=h), 41.0, 30.0) for h in range(2, 8)]
+    hot2 = [(D + timedelta(hours=h), 35.0 + h / 10, 45.0 + h) for h in (8, 9)]
+    load_readings(conn, "RUH-01", hot + stuck + hot2)
+    r = one_day(conn)
+    assert (r["readings"], r["valid_readings"], r["unreliable_readings"]) == (10, 4, 6)
+    assert r["oor_readings"] == 4 and r["oor_minutes"] == 240
+    assert r["temp_max"] == Decimal("35.9")                    # 41.0 from the stuck block is ignored
+    assert sorted(e["readings"] for e in metrics.events(conn, MAY, ["RUH-01"])) == [2, 2]
+    [run] = metrics.stuck_runs(conn, MAY, ["RUH-01"])
+    assert run["readings"] == 6 and run["temperature"] == Decimal("41.0")
+    [row] = metrics.site_table(conn, MAY, ["RUH-01"])
+    assert row["unreliable_readings"] == 6 and row["temp_max"] == Decimal("35.9")
+    assert "stuck_sensor" in row["status_reasons"]
+
+
+def test_all_readings_unreliable_gives_no_averages(conn):
+    load_readings(conn, "RUH-01", [(D + timedelta(hours=h), 22.0, 45.0) for h in range(8)])
+    r = one_day(conn)
+    assert r["valid_readings"] == 0 and r["temp_avg"] is None and r["temp_max"] is None
+    k = metrics.kpis(conn, MAY, ["RUH-01"])
+    assert k["temp_avg"] is None and k["unreliable_readings"] == 8 and k["readings"] == 8
 
 
 def test_five_identical_readings_are_not_stuck(conn):
@@ -117,8 +144,10 @@ def test_threshold_edit_changes_metrics_immediately_and_is_audited(day):
                                          "stuck_min_hours": 7}, user_id=None)
     assert changed
     r = one_day(day)
-    # temp_max 33: only humidity at 03 (70) and 04 (66) remain out -> 2 readings, one event; 6 identical < 7 h
-    assert (r["oor_readings"], r["oor_events"], r["stuck_readings"]) == (2, 1, 0)
+    # temp_max 33: only humidity at 03 (70) and 04 (66) remain out -> 2 readings, one event; 6 identical < 7 h,
+    # so hours 08-13 become valid again: 14 valid readings, avg 358.6 / 14
+    assert (r["oor_readings"], r["oor_events"], r["unreliable_readings"]) == (2, 1, 0)
+    assert round(r["temp_avg"], 6) == Decimal("25.614286")
     audit = day.execute("SELECT old_values, new_values FROM threshold_audit").fetchone()
     assert audit["old_values"]["temp_max"] == 30.0 and audit["new_values"]["temp_max"] == 33.0
     # writing the same values again is not a change
@@ -133,7 +162,7 @@ def test_reading_interval_setting(day):
     assert r["expected_readings"] == 48 and r["completeness_pct"] == Decimal("29.17") and r["oor_minutes"] == 120
 
 
-def test_kpis_weight_by_readings_and_count_status(conn):
+def test_kpis_weight_by_valid_readings_and_count_status(conn):
     # RUH-01: 2 readings avg 20; RUH-02: 6 readings avg 30 -> overall avg (40 + 180) / 8 = 27.5
     load_readings(conn, "RUH-01", [(D + timedelta(hours=h), 20.0, 40.0 + h) for h in range(2)])
     load_readings(conn, "RUH-02", [(D + timedelta(hours=h), 30.0, 40.0 + h) for h in range(6)])
