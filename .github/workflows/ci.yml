@@ -81,7 +81,7 @@ jobs:
           ! grep -v '^duplicate_file' reingest.txt
 
       - name: Tests
-        run: python -m pytest -q -p no:cacheprovider
+        run: python -m pytest -q -p no:cacheprovider --timeout=120
 
       - name: Sample PDFs (August 2026, EN + AR)
         run: |
