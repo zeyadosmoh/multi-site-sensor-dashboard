@@ -1,5 +1,6 @@
 """Web app: role permissions on every route, CSRF, login/session rules, uploads and threshold edits via HTTP."""
 
+import csv
 import io
 import re
 import zipfile
@@ -212,8 +213,8 @@ def test_upload_via_web_and_rejects_csv_is_safe(app, conn):
     assert r.text.count("loaded") >= 2
     up = conn.execute("SELECT upload_id, rejected FROM uploads WHERE filename='RUH-02_2026-08.xlsx'").fetchone()
     assert up["rejected"] == 1
-    csv = admin.get(f"/uploads/{up['upload_id']}/rejects.csv").text
-    assert "'+HYPERLINK" in csv  # spreadsheet formula prefix neutralised
+    body = admin.get(f"/uploads/{up['upload_id']}/rejects.csv").text
+    assert "'+HYPERLINK" in body  # spreadsheet formula prefix neutralised
     # same files again: nothing changes
     r = admin.post("/uploads", files=files, headers={"X-CSRF-Token": token(admin), "HX-Request": "true"})
     assert r.text.count('class="state duplicate_file"') == 2
@@ -237,6 +238,34 @@ def test_upload_messages_follow_the_page_language(app, conn):
     # the English text is kept in the error column (CLI, psql)
     assert conn.execute("SELECT error FROM uploads WHERE error_code = 'unknown_site' LIMIT 1").fetchone()["error"] \
         == "unknown site code ZZZ-01"
+
+
+def test_rejects_csv_follows_the_page_language(app, conn):
+    admin = login(app, "admin", ADMIN_PW)
+    rows = hour_rows(datetime(2026, 8, 1), 3) + [["2026-08-01", "05:00", "n/a", 40], ["2026-08-01", "06:00", -60, 40],
+                                                  ["2026-09-02", "07:00", 22, 40]]
+    files = [("files", ("TAB-01_2026-08.xlsx", make_xlsx(rows), "application/x"))]
+    admin.post("/uploads", files=files, headers={"X-CSRF-Token": token(admin), "HX-Request": "true"})
+    up = conn.execute("SELECT upload_id FROM uploads WHERE filename = 'TAB-01_2026-08.xlsx'").fetchone()["upload_id"]
+    url = f"/uploads/{up}/rejects.csv"
+    en = admin.get(url).text
+    assert en.startswith("\ufeffsheet,row,date,time,temperature,humidity,reason,message,reason code")
+    assert 'not a number,"temperature ""n/a"" is not a number",non_numeric' in en
+    assert "date 2026-09-02 is outside this file's month 2026-08" in en
+    admin.get("/lang/ar?next=/uploads")
+    ar = admin.get(url).text
+    assert ar.startswith("\ufeffالورقة,الصف,التاريخ,الوقت,الحرارة,الرطوبة,السبب,التفاصيل,رمز السبب")
+    assert "ليست رقمًا,الحرارة «\u200en/a\u200e» ليست رقمًا,non_numeric" in ar
+    assert "حرارة مستحيلة,الحرارة \u200e-60.0\u200e °C خارج النطاق الممكن" in ar
+    assert "التاريخ \u200e2026-09-02\u200e خارج شهر الملف (\u200e2026-08\u200e)" in ar
+    for row in list(csv.reader(io.StringIO(ar)))[1:]:  # reason and message are Arabic; the code column stays fixed
+        text = re.sub("\u200e[^\u200e]*\u200e", "", row[6] + " " + row[7])
+        assert re.search("[\u0600-\u06ff]", text) and set(re.findall("[A-Za-z]+", text)) <= {"C"}, row
+    # the English text stays in the database (CLI, psql); a row stored before message codes is exported as it is
+    conn.execute("UPDATE row_rejects SET message_code = NULL, message = 'old text' WHERE upload_id = %s "
+                 "AND reason = 'non_numeric'", (up,))
+    conn.commit()
+    assert ",old text,non_numeric" in admin.get(url).text
 
 
 def test_language_switch_and_rtl(app):

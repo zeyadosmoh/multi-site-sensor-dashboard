@@ -38,6 +38,23 @@ CODES: dict[str, tuple[str, ...]] = {
     "dates_mixed": (),
     "dates_serial": (),
     "duplicate_file": ("upload_id",),
+    # row rejects (the `message` column of rejects.csv; the row's reason code is p7.ingest.validate.REASONS)
+    "row_date_blank": (),
+    "row_date_invalid": ("value",),
+    "row_time_blank": (),
+    "row_time_invalid": ("value",),
+    "row_time_off_interval": ("time", "minutes"),
+    "row_temperature_blank": (),
+    "row_humidity_blank": (),
+    "row_both_blank": (),
+    "row_temperature_not_number": ("value",),
+    "row_humidity_not_number": ("value",),
+    "row_both_not_number": ("temperature", "humidity"),
+    "row_temperature_impossible": ("value",),
+    "row_humidity_impossible": ("value",),
+    "row_outside_month": ("date", "month"),
+    "row_duplicate_exact": ("timestamp", "row"),
+    "row_duplicate_conflict": ("timestamp", "rows"),
 }
 
 

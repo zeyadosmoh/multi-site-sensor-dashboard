@@ -133,10 +133,14 @@ class Translator:
             return self.plural(key, params["n"], **kw)
         return self(key, **kw)
 
-    def msg_plain(self, m) -> str:
+    def msg_plain(self, m, ltr_marks: bool = False) -> str:
+        """Plain text. ltr_marks (for CSV cells): in a right-to-left language each parameter is wrapped in
+        left-to-right marks, so "-60", "2026-08-01 10:00" or "2, 3" keep their order inside the Arabic text."""
         if isinstance(m, str):
             return m
         key, params = self._msg_parts(m)
+        if ltr_marks and direction(self.lang) == "rtl":
+            params = {k: f"\u200e{v}\u200e" for k, v in params.items()}
         if isinstance(self._entry(key), dict):
             return self.plural_plain(key, params["n"], **params)
         return self.plain(key, **params)

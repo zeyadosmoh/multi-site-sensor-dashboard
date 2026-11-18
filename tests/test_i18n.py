@@ -130,10 +130,12 @@ def test_plural_and_plain_keys_are_not_mixed_up():
 SRC = Path(__file__).parent.parent / "src" / "p7"
 SAMPLE_PARAMS = {"count": 600, "limit": 500, "error": "KeyError", "site": "ZZZ-01", "file_site": "RUH-01",
                  "file_month": "2026-05", "cover_site": "JED-01", "cover_month": "2026-05", "month": "2026-06",
-                 "row": 3, "n": 2, "upload_id": 12}
+                 "row": 3, "n": 2, "upload_id": 12, "value": "abc", "time": "10:30:00", "minutes": 60,
+                 "temperature": "x", "humidity": "y", "date": "2026-09-01", "timestamp": "2026-08-03 10:00",
+                 "rows": "2, 3"}
 # Latin words an Arabic message may contain: format and sheet names the user sees in Excel, header names, examples
 LATIN_OK = {"zip", "xlsx", "Excel", "Office", "Open", "XML", "Info", "Site", "code", "Month", "Date", "Time",
-            "Temperature", "Humidity", "RUH", "DD", "MM", "YYYY", "a", "b"}
+            "Temperature", "Humidity", "RUH", "DD", "MM", "YYYY", "a", "b", "C"}
 
 
 def test_every_upload_message_code_exists_in_en_and_ar():
@@ -155,6 +157,8 @@ def test_every_message_code_used_by_ingestion_is_defined():
     for call in re.findall(r"FileRejected\(([^)]{0,40})", text):
         assert re.match(r'"[a-z_]+"$|"[a-z_]+",|Exception$|pre_rejected\.code', call), call
     assert not re.search(r"""warnings(?:\.append\(|\s*\+?=\s*\[)\s*f?["']""", text)
+    # every rejected row carries a coded message, not free text
+    assert not re.search(r"""Reject\([^()]*,\s*"[a-z_]+",\s*f?["']""", text)
 
 
 @pytest.mark.parametrize("code", sorted(CODES))
@@ -172,3 +176,11 @@ def test_upload_messages_render_in_arabic(code):
 
 def test_legacy_plain_text_messages_are_escaped():
     assert str(Translator("ar").msg("old <b>warning</b>")) == "old &lt;b&gt;warning&lt;/b&gt;"
+
+
+def test_csv_messages_keep_parameters_left_to_right_in_arabic():
+    m = Msg("row_duplicate_conflict", {"timestamp": "2026-08-03 10:00", "rows": "2, 3"})
+    assert Translator("ar").msg_plain(m, ltr_marks=True) == \
+        "\u200e2026-08-03 10:00\u200e موجود في الصفوف \u200e2, 3\u200e بقيم مختلفة"
+    assert Translator("en").msg_plain(m, ltr_marks=True) == \
+        "2026-08-03 10:00 appears in rows 2, 3 with different values"

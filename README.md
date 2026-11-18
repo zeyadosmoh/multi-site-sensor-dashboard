@@ -81,10 +81,10 @@ Each PDF has a `facts.json` next to it with every number it prints.
   - Numbers, ranges and ratios are isolated left-to-right runs, so "743 / 744" and "22.7 – 25.6" never flip in right-to-left text.
   - Arabic site and city names appear in the UI and the PDFs.
   - Counts use proper plural forms: "1 event" / "2 events", and in Arabic 1 ساعة، 2 ساعتان، 3–10 ساعات، 11+ ساعة. Tests cover 0, 1, 2, 3 and 11 in both languages.
-  - Upload log warnings and file errors are stored as a code plus parameters and shown in the viewer's language. A test checks that every code has English and Arabic text.
+  - Upload log warnings, file errors and the per-row messages in `rejects.csv` are stored as a code plus parameters and shown in the viewer's language (the CSV also has translated headers and a BOM for Excel). A test checks that every code has English and Arabic text.
   - The screenshot script fails if any page scrolls sideways at 390 px or logs a console or CSP error.
 - **Tested end to end.**
-  - **185 pytest tests**, covering: validation cases, workbook/detection, ingestion and idempotency, hand-checked metrics, role permissions, web flows, i18n, and PDF numbers in English and Arabic.
+  - **203 pytest tests**, covering: validation cases, workbook/detection, ingestion and idempotency, hand-checked metrics, role permissions, web flows, i18n, and PDF numbers in English and Arabic.
   - **CI** runs: lint → generate (checks the committed sample zip is byte-identical) → load all 78 files → verify against the manifest → re-ingest (must change nothing) → tests → sample PDFs → Docker image build.
 
 ## Architecture
@@ -123,7 +123,7 @@ docker compose up -d postgres                                   # 127.0.0.1:5437
 .venv/bin/python -m p7 ingest data/synthetic/xlsx --no-reports  # ~7 s; PDFs are then built on demand
 .venv/bin/python -m p7 verify-manifest                          # MATCH
 .venv/bin/python -m p7 serve                                    # http://127.0.0.1:8790 (admin / ADMIN_PASSWORD in .env)
-.venv/bin/python -m pytest                                      # 185 tests, separate p7_test database
+.venv/bin/python -m pytest                                      # 203 tests, separate p7_test database
 ```
 
 To run everything in Docker (Postgres and the app, which includes Chromium): `docker compose --profile app up -d --build`. See [docs/deployment.md](docs/deployment.md).

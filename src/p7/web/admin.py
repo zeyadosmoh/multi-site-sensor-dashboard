@@ -69,18 +69,29 @@ async def upload(request: Request, background: BackgroundTasks, user: dict = Dep
 
 
 @router.get("/uploads/{upload_id}/rejects.csv")
-def rejects_csv(upload_id: int, conn: psycopg.Connection = Depends(db)):
+def rejects_csv(upload_id: int, request: Request, conn: psycopg.Connection = Depends(db)):
+    """The rejected rows of one upload, in the viewer's language. Raw cells are echoed as they were in the file."""
     up = conn.execute("SELECT filename FROM uploads WHERE upload_id = %s", (upload_id,)).fetchone()
     if not up:
         raise HTTPException(404, "unknown upload")
-    rows = conn.execute("""SELECT sheet, row_number, raw_date, raw_time, raw_temperature, raw_humidity, reason, message
+    rows = conn.execute("""SELECT sheet, row_number, raw_date, raw_time, raw_temperature, raw_humidity, reason, message,
+                                  message_code, message_params
                            FROM row_rejects WHERE upload_id = %s ORDER BY row_number""", (upload_id,)).fetchall()
+    t = Translator(lang_of(request))
     buf = io.StringIO()
+    buf.write("\ufeff")  # BOM so Excel opens UTF-8 (Arabic) correctly
     w = csv.writer(buf)
-    w.writerow(["sheet", "row", "date", "time", "temperature", "humidity", "reason", "message"])
+    w.writerow([t.plain("rejects_col_sheet"), t.plain("rejects_col_row"), t.plain("rejects_col_date"),
+                t.plain("rejects_col_time"), t.plain("rejects_col_temperature"), t.plain("rejects_col_humidity"),
+                t.plain("rejects_col_reason"), t.plain("rejects_col_message"), t.plain("rejects_col_code")])
     for r in rows:
+        # rows stored before message codes existed have only the English text
+        message = (t.msg_plain({"code": r["message_code"], "params": r["message_params"]}, ltr_marks=True)
+                   if r["message_code"] else r["message"])
+        cells = [r["sheet"], r["row_number"], r["raw_date"], r["raw_time"], r["raw_temperature"], r["raw_humidity"],
+                 t.plain(f"reject_{r['reason']}"), message, r["reason"]]
         # neutralise spreadsheet formulas in echoed cell text (CSV injection)
-        w.writerow([("'" + v) if isinstance(v, str) and v[:1] in "=+-@\t\r" else v for v in r.values()])
+        w.writerow([("'" + v) if isinstance(v, str) and v[:1] in "=+-@\t\r" else v for v in cells])
     return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="rejects_upload_{upload_id}.csv"'})
 

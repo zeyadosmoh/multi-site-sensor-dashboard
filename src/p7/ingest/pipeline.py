@@ -162,9 +162,10 @@ def ingest_one(conn: psycopg.Connection, inc: Incoming, batch_id: uuid.UUID, sou
                 with conn.cursor() as cur:
                     cur.executemany(
                         """INSERT INTO row_rejects (upload_id, sheet, row_number, raw_date, raw_time, raw_temperature,
-                                                    raw_humidity, reason, message)
+                                                    raw_humidity, reason, message, message_code, message_params)
                            VALUES (%(upload_id)s, %(sheet)s, %(row_number)s, %(raw_date)s, %(raw_time)s,
-                                   %(raw_temperature)s, %(raw_humidity)s, %(reason)s, %(message)s)""",
+                                   %(raw_temperature)s, %(raw_humidity)s, %(reason)s, %(message)s,
+                                   %(message_code)s, %(message_params)s)""",
                         [{**reject_text(r), "upload_id": upload_id, "sheet": parsed.sheet} for r in v.rejects])
             res.rejected = len(v.rejects)
             res.reject_reasons = _count(v.rejects)
